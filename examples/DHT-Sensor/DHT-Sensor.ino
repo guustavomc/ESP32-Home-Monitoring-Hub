@@ -1,4 +1,4 @@
-// Arduino - Sensor DHT - Umidade e Temperatura
+// ESP32 - Sensor DHT - Umidade e Temperatura
 // https://blog.eletrogate.com/
 // Adafruit Unified Sensor Library: https://github.com/adafruit/Adafruit_Sensor
 
