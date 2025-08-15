@@ -36,7 +36,7 @@
 #define TFT_CS         14
 #define TFT_RST        15
 #define TFT_DC         32
-//MOSI == SDA pin 23
+//MOSI ou SDA pin 23
 //SCL pin 18
 
 
