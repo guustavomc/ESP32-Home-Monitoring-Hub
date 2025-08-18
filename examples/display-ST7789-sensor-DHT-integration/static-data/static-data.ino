@@ -27,70 +27,61 @@ void setup(void) {
   Serial.print(F("Hello! ST77xx TFT Test"));
 
   tft.init(240, 280);           // Init ST7789 280x240
-
-  //tft.setSPISpeed(40000000);
-  Serial.println(F("Initialized"));
-
-  uint16_t time = millis();
-  tft.fillScreen(ST77XX_BLACK);
-  time = millis() - time;
-
   dht.begin();  
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);           // imprime os detalhes do Sensor de Temperatura
   dht.humidity().getSensor(&sensor);            // imprime os detalhes do Sensor de Umidade
+  //tft.setSPISpeed(40000000);
 
-  Serial.println("done");
-  delay(1000);
+  uint16_t time = millis();
+  tft.fillScreen(ST77XX_BLACK);
+  time = millis() - time;
 }
 
 void loop() {
-    sensors_event_t event;                        // inicializa o evento da Temperatura
-    dht.temperature().getEvent(&event);           // faz a leitura da Temperatura
-    dht.humidity().getEvent(&event);              // faz a leitura de umidade
+    delay(delayMS);
 
-    if (isnan(event.temperature) || isnan(event.relative_humidity))                 // se algum erro na leitura
-    {
-        Serial.println("Error reading sensor data");
-    }
-    else                                          // senão
-    {
-        Serial.print("Temperatura: ");              // imprime a Temperatura
-        Serial.print(event.temperature);
-        Serial.println(" *C");
-        tftPrintTest();
+    sensors_event_t tempEvent;
+    sensors_event_t humidEvent;
 
+    dht.temperature().getEvent(&tempEvent);   // read temperature
+    dht.humidity().getEvent(&humidEvent);     // read humidity
+
+    float temperatureData = tempEvent.temperature;
+    float humidityData = humidEvent.relative_humidity;
+    if (isnan(temperatureData)) {
+      Serial.println("Error reading temperature data");
+    } 
+    else if (isnan(humidityData)) {
+      Serial.println("Error reading humidity data");
+    } 
+    else {
+      Serial.print("Temperature: ");
+      Serial.print(temperatureData);
+      Serial.println(" *C");
+
+      Serial.print("Humidity: ");
+      Serial.print(humidityData);
+      Serial.println("%");
+
+      tftPrintTest(temperatureData, humidityData);
     }
-    delay(10000);
+    delay(5000);
 }
 
 
-void testdrawtext(char *text, uint16_t color) {
-  tft.setCursor(0, 0);
-  tft.setTextColor(color);
-  tft.setTextWrap(true);
-  tft.print(text);
-}
-
-
-void tftPrintTest() {
+void tftPrintTest(float temperature, float humidity) {
   tft.setTextWrap(false);
   tft.fillScreen(ST77XX_BLACK);
   tft.setCursor(100, 0);
-  tft.setTextColor(ST77XX_RED);
+  tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.println("TESTS");
+  tft.println("DATA");
   tft.setCursor(0, 35);
-  tft.setTextColor(ST77XX_RED);
-  tft.setTextSize(1);
-  tft.println("Teste 1");
-  tft.setTextColor(ST77XX_YELLOW);
+  tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.println("Teste 2");
-  tft.setTextColor(ST77XX_GREEN);
-  tft.setTextSize(3);
-  tft.println("Teste 3");
-  tft.setTextColor(ST77XX_BLUE);
-  tft.setTextSize(4);
-  tft.println("Teste 4");
+  tft.print(temperature);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+  tft.print(humidity);
 }
