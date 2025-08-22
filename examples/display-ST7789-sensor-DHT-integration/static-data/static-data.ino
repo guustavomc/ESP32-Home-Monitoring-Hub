@@ -49,6 +49,14 @@ void loop() {
 
     float temperatureData = tempEvent.temperature;
     float humidityData = humidEvent.relative_humidity;
+
+    tft.setTextWrap(false);
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(100, 0);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setTextSize(2);
+    tft.println("DATA");
+
     if (isnan(temperatureData)) {
       Serial.println("Error reading temperature data");
     } 
@@ -83,5 +91,5 @@ void tftPrintTest(float temperature, float humidity) {
   tft.print(temperature);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.print(humidity);
+  tft.println(humidity);
 }
