@@ -1,3 +1,5 @@
+//Code from https://blog.eletrogate.com/sensores-dht11-dht22/
+
 // ESP32 - Sensor DHT - Umidade e Temperatura
 // https://blog.eletrogate.com/
 // Adafruit Unified Sensor Library: https://github.com/adafruit/Adafruit_Sensor
