@@ -36,10 +36,8 @@
 #define TFT_CS         14
 #define TFT_RST        15
 #define TFT_DC         32
-
-//Standard
-//#define TFT_MOSI 23  // MOSI ou SDA
-//#define TFT_SCLK 18  // Clock out
+//MOSI == SDA pin 23
+//SCL pin 18
 
 // OPTION 1 (recommended) is to use the HARDWARE SPI pins, which are unique
 // to each board and not reassignable. For Arduino Uno: MOSI = pin 11 and

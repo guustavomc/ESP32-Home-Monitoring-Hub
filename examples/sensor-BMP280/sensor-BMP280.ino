@@ -1,4 +1,5 @@
-//Code from https://github.com/Circuit-Digest/Basic-Arduino-Tutorials-for-Beginners-/blob/main/BMP280%20Pressure%20Sensor%20with%20Arduino/code/bmp280_temp_pressure_altitude/bmp280_temp_pressure_altitude.ino
+//Code from https://circuitdigest.com/microcontroller-projects/interfacing-bmp280-sensor-with-arduino
+//Code from https://github.com/Circuit-Digest/Basic-Arduino-Tutorials-for-Beginners-/tree/main/BMP280%20Pressure%20Sensor%20with%20Arduino
 
 /***************************************************************************
   This is a library for the BMP280 humidity, temperature & pressure sensor
