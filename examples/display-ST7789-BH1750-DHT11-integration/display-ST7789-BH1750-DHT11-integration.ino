@@ -12,7 +12,7 @@
 #define TFT_CS         14
 #define TFT_RST        15
 #define TFT_DC         32
-//MOSI == SDA pin 23
+//MOSI or SDA pin 23
 //SCL pin 18
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
@@ -80,6 +80,7 @@ void loop() {
       Serial.print(humidityData);
       Serial.println("%");
 
+      lightData=lightMeter.readLightLevel();
       Serial.print("Light: ");
       Serial.print(lightData);
       Serial.println("lx");
