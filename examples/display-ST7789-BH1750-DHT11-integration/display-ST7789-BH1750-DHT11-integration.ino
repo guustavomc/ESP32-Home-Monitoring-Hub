@@ -28,16 +28,18 @@ void setup(void) {
 
   Serial.begin(9600);
   Serial.print(F("Hello! ST77xx TFT Test"));
-  Wire.begin();
   tft.init(240, 280);
+  uint16_t time = millis();
+  tft.fillScreen(ST77XX_BLACK);
+  time = millis() - time;
+
   dht.begin();  
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
   dht.humidity().getSensor(&sensor);           
 
-  uint16_t time = millis();
-  tft.fillScreen(ST77XX_BLACK);
-  time = millis() - time;
+  Wire.begin();
+  lightMeter.begin();
 }
 
 void loop() {
@@ -51,6 +53,7 @@ void loop() {
 
     float temperatureData = tempEvent.temperature;
     float humidityData = humidEvent.relative_humidity;
+    float lightData = 0.0;
 
     tft.setTextWrap(false);
     tft.fillScreen(ST77XX_BLACK);
@@ -65,6 +68,9 @@ void loop() {
     else if (isnan(humidityData)) {
       Serial.println("Error reading humidity data");
     } 
+    else if (lightMeter.readLightLevel()==-2.0) {
+      Serial.println("Error reading light data");
+    } 
     else {
       Serial.print("Temperature: ");
       Serial.print(temperatureData);
@@ -74,13 +80,17 @@ void loop() {
       Serial.print(humidityData);
       Serial.println("%");
 
-      tftPrintTest(temperatureData, humidityData, lightMeter.readLightLevel());
+      Serial.print("Light: ");
+      Serial.print(lightData);
+      Serial.println("lx");
+
+      tftPrintTest(temperatureData, humidityData, lightData);
     }
     delay(5000);
 }
 
 
-void tftPrintTest(float temperature, float humidity, float lux) {
+void tftPrintTest(float temperature, float humidity, float light) {
   tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
@@ -94,5 +104,5 @@ void tftPrintTest(float temperature, float humidity, float lux) {
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
   tft.print("Light: ");
-  tft.println(lux);
+  tft.println(light);
 }
