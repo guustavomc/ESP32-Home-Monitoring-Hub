@@ -1,25 +1,6 @@
 //Code from https://circuitdigest.com/microcontroller-projects/interfacing-bmp280-sensor-with-arduino
 //Code from https://github.com/Circuit-Digest/Basic-Arduino-Tutorials-for-Beginners-/tree/main/BMP280%20Pressure%20Sensor%20with%20Arduino
-
-/***************************************************************************
-  This is a library for the BMP280 humidity, temperature & pressure sensor
-
-  Designed specifically to work with the Adafruit BMP280 Breakout
-  ----> http://www.adafruit.com/products/2651
-
-  These sensors use I2C or SPI to communicate, 2 or 4 pins are required
-  to interface.
-
-  Adafruit invests time and resources providing this open source code,
-  please support Adafruit andopen-source hardware by purchasing products
-  from Adafruit!
-
-  Written by Limor Fried & Kevin Townsend for Adafruit Industries.
-  BSD license, all text above must be included in any redistribution
- ***************************************************************************/
-
 #include <Wire.h>
-#include <SPI.h>
 #include <Adafruit_BMP280.h>
 
 #define BMP280_ADDRESS 0x76
