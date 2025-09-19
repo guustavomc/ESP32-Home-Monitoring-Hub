@@ -20,8 +20,6 @@ void setup(void) {
 
   tft.init(240, 280);           // Init ST7789 280x240
 
-  
-  //tft.setSPISpeed(40000000);
   Serial.println(F("Initialized"));
 
   uint16_t time = millis();
