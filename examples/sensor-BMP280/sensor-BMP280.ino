@@ -6,6 +6,8 @@
 #define BMP280_ADDRESS 0x76
 Adafruit_BMP280 bmp; // I2C
 
+//SCK (SCL Pin)	  - GPIO 22
+//SDI (SDA pin)	  - GPIO 21
 
 
 void setup() {
