@@ -8,8 +8,9 @@
 #define TFT_CS         14
 #define TFT_RST        15
 #define TFT_DC         32
-//MOSI == SDA pin 23
-//SCL pin 18
+
+//SCL Pin	          - GPIO 18
+//MOSI (SDA pin)	  - GPIO 23
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
