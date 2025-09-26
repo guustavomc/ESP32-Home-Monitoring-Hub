@@ -1,69 +1,110 @@
-// Arduino - Sensor DHT - Umidade e Temperatura
-// https://blog.eletrogate.com/
-// Adafruit Unified Sensor Library: https://github.com/adafruit/Adafruit_Sensor
+#include <Adafruit_GFX.h>    
+#include <Adafruit_ST7789.h> 
+#include <SPI.h>
 
-#include <Adafruit_Sensor.h>                       // Biblioteca DHT Sensor Adafruit 
+#include <Wire.h>
+#include <BH1750.h>
+
+#include <Adafruit_Sensor.h>                       
 #include <DHT.h>
 #include <DHT_U.h>
 
-// selecione um sensor, retirando o comentário - duas barras
-#define DHTTYPE    DHT11                           // Sensor DHT11
-//#define DHTTYPE      DHT22                       // Sensor DHT22 ou AM2302
+#define TFT_CS         14
+#define TFT_RST        15
+#define TFT_DC         32
 
-#define DHTPIN 2                                   // Pino do Arduino conectado no Sensor(Data) 
-DHT_Unified dht(DHTPIN, DHTTYPE);                  // configurando o Sensor DHT - pino e tipo
-uint32_t delayMS;                                  // variável para atraso no tempo
+//SCL Pin	          - GPIO 18
+//MOSI (SDA pin)	  - GPIO 23
 
-void setup()
-{
-  Serial.begin(9600);                             // monitor serial 9600 bps
-  dht.begin();                                    // inicializa a função
-  Serial.println("Usando o Sensor DHT");
+Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
+
+BH1750 lightMeter;
+
+#define DHTTYPE    DHT11                           
+#define DHTPIN 2                                   
+DHT_Unified dht(DHTPIN, DHTTYPE);                  
+uint32_t delayMS;                                  
+
+void setup(void) {
+
+  Serial.begin(9600);
+  Serial.print(F("Hello! ST77xx TFT Test"));
+  tft.init(240, 280);
+  uint16_t time = millis();
+  tft.fillScreen(ST77XX_BLACK);
+  time = millis() - time;
+
+  dht.begin();  
   sensor_t sensor;
-  dht.temperature().getSensor(&sensor);           // imprime os detalhes do Sensor de Temperatura
-  Serial.println("------------------------------------");
-  Serial.println("Temperatura");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Valor max:    "); Serial.print(sensor.max_value); Serial.println(" *C");
-  Serial.print  ("Valor min:    "); Serial.print(sensor.min_value); Serial.println(" *C");
-  Serial.print  ("Resolucao:   "); Serial.print(sensor.resolution); Serial.println(" *C");
-  Serial.println("------------------------------------");
+  dht.temperature().getSensor(&sensor);
+  dht.humidity().getSensor(&sensor);           
 
-  dht.humidity().getSensor(&sensor);            // imprime os detalhes do Sensor de Umidade
-  Serial.println("------------------------------------");
-  Serial.println("Umidade");
-  Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-  Serial.print  ("Valor max:    "); Serial.print(sensor.max_value); Serial.println("%");
-  Serial.print  ("Valor min:    "); Serial.print(sensor.min_value); Serial.println("%");
-  Serial.print  ("Resolucao:   "); Serial.print(sensor.resolution); Serial.println("%");
-  Serial.println("------------------------------------");
-  delayMS = sensor.min_delay / 1000;            // define o atraso entre as leituras
+  Wire.begin();
+  lightMeter.begin();
 }
 
-void loop()
-{
-  delay(delayMS);                               // atraso entre as medições
-  sensors_event_t event;                        // inicializa o evento da Temperatura
-  dht.temperature().getEvent(&event);           // faz a leitura da Temperatura
-  if (isnan(event.temperature))                 // se algum erro na leitura
-  {
-    Serial.println("Erro na leitura da Temperatura!");
-  }
-  else                                          // senão
-  {
-    Serial.print("Temperatura: ");              // imprime a Temperatura
-    Serial.print(event.temperature);
-    Serial.println(" *C");
-  }
-  dht.humidity().getEvent(&event);              // faz a leitura de umidade
-  if (isnan(event.relative_humidity))           // se algum erro na leitura
-  {
-    Serial.println("Erro na leitura da Umidade!");
-  }
-  else                                          // senão
-  {
-    Serial.print("Umidade: ");                  // imprime a Umidade
-    Serial.print(event.relative_humidity);
-    Serial.println("%");
-  }
+void loop() {
+    delay(delayMS);
+
+    sensors_event_t tempEvent;
+    sensors_event_t humidEvent;
+
+    dht.temperature().getEvent(&tempEvent);
+    dht.humidity().getEvent(&humidEvent);
+
+    float temperatureData = tempEvent.temperature;
+    float humidityData = humidEvent.relative_humidity;
+    float lightData = 0.0;
+
+    tft.setTextWrap(false);
+    tft.fillScreen(ST77XX_BLACK);
+    tft.setCursor(100, 0);
+    tft.setTextColor(ST77XX_WHITE);
+    tft.setTextSize(2);
+    tft.println("Data");
+
+    if (isnan(temperatureData)) {
+      Serial.println("Error reading temperature data");
+    } 
+    else if (isnan(humidityData)) {
+      Serial.println("Error reading humidity data");
+    } 
+    else if (lightMeter.readLightLevel()==-2.0) {
+      Serial.println("Error reading light data");
+    } 
+    else {
+      Serial.print("Temperature: ");
+      Serial.print(temperatureData);
+      Serial.println(" *C");
+
+      Serial.print("Humidity: ");
+      Serial.print(humidityData);
+      Serial.println("%");
+
+      lightData=lightMeter.readLightLevel();
+      Serial.print("Light: ");
+      Serial.print(lightData);
+      Serial.println("lx");
+
+      tftPrintTest(temperatureData, humidityData, lightData);
+    }
+    delay(5000);
+}
+
+
+void tftPrintTest(float temperature, float humidity, float light) {
+  tft.setTextWrap(false);
+  tft.setCursor(0, 35);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+  tft.print("Temperature: ");
+  tft.println(temperature);  
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+  tft.print("Humidity: ");
+  tft.println(humidity);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+  tft.print("Light: ");
+  tft.println(light);
 }
