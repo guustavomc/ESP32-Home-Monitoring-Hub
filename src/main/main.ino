@@ -68,7 +68,7 @@ void loop() {
     // ===== BH1750 =====
     float lightData = lightMeter.readLightLevel();;
 
-    tftPrintHeader();
+    tftPrintDisplayHeader();
 
     if (isnan(temperatureData) || isnan(humidityData)) {
       Serial.println("Error reading DHT11 temperature and humidity data");
@@ -78,12 +78,12 @@ void loop() {
     } 
     else {
       serialPrintSensorData(temperatureData, humidityData, lightData);
-      tftPrintTest(temperatureData, humidityData, lightData);
+      tftPrintSensorData(temperatureData, humidityData, lightData);
     }
     delay(5000);
 }
 
-void tftPrintHeader(){
+void tftPrintDisplayHeader(){
   tft.setTextWrap(false);
   tft.fillScreen(ST77XX_BLACK);
   tft.setCursor(70, 0);
@@ -106,7 +106,7 @@ void serialPrintSensorData(float temperature, float humidity, float light){
   Serial.println("lx");
 }
 
-void tftPrintTest(float temperature, float humidity, float light) {
+void tftPrintSensorData(float temperature, float humidity, float light) {
   tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
