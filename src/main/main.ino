@@ -66,7 +66,7 @@ void loop() {
     float humidityData = humidEvent.relative_humidity;
 
     // ===== BH1750 =====
-    float lightData = lightMeter.readLightLevel();;
+    float lightData = lightMeter.readLightLevel();
 
     tftPrintDisplayHeader();
 
