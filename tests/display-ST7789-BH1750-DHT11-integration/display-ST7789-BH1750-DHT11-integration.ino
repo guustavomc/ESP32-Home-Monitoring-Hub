@@ -96,15 +96,19 @@ void tftPrintTest(float temperature, float humidity, float light) {
   tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(2);
+  tft.setTextSize(1);
   tft.print("Temperature: ");
-  tft.println(temperature);  
+  tft.print(temperature);  
+  tft.println(" *C");
   tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(2);
+  tft.setTextSize(1);
   tft.print("Humidity: ");
-  tft.println(humidity);
+  tft.print(humidity);
+  tft.println(" %");
   tft.setTextColor(ST77XX_WHITE);
-  tft.setTextSize(2);
+  tft.setTextSize(1);
   tft.print("Light: ");
-  tft.println(light);
+  tft.print(light);
+  tft.println(" lx");
+
 }
