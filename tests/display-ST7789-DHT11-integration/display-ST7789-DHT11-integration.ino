@@ -6,6 +6,8 @@
 #include <DHT.h>
 #include <DHT_U.h>
 
+// ================= TFT Pins ==================
+
 #define TFT_CS         14
 #define TFT_RST        15
 #define TFT_DC         32
@@ -15,30 +17,38 @@
 
 Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
+// ================= Sensors ===================
+
 #define DHTTYPE    DHT11                           
 #define DHTPIN 2                                   
-DHT_Unified dht(DHTPIN, DHTTYPE);                  
+DHT_Unified dht(DHTPIN, DHTTYPE);  
+
+// ================= Global ====================
+
 uint32_t delayMS;                                  
 
 void setup(void) {
 
   Serial.begin(9600);
-  Serial.print(F("Hello! ST77xx TFT Test"));
+  Serial.print(F("Starting system..."));
 
-  tft.init(240, 280);           
+  // TFT
+  tft.init(240, 280); 
+  tft.fillScreen(ST77XX_BLACK);
+
+
+  // DHT11
   dht.begin();  
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);           
   dht.humidity().getSensor(&sensor);            
 
-  uint16_t time = millis();
-  tft.fillScreen(ST77XX_BLACK);
-  time = millis() - time;
 }
 
 void loop() {
     delay(delayMS);
 
+    // ===== DHT11 =====
     sensors_event_t tempEvent;
     sensors_event_t humidEvent;
 
@@ -48,31 +58,35 @@ void loop() {
     float temperatureData = tempEvent.temperature;
     float humidityData = humidEvent.relative_humidity;
 
-    tft.setTextWrap(false);
-    tft.fillScreen(ST77XX_BLACK);
-    tft.setCursor(100, 0);
-    tft.setTextColor(ST77XX_WHITE);
-    tft.setTextSize(2);
-    tft.println("Data");
+    tftPrintHeader();
 
-    if (isnan(temperatureData)) {
-      Serial.println("Error reading temperature data");
-    } 
-    else if (isnan(humidityData)) {
-      Serial.println("Error reading humidity data");
-    } 
+    if (isnan(temperatureData) || isnan(humidityData)) {
+      Serial.println("Error reading DHT11 data");
+    }
     else {
-      Serial.print("Temperature: ");
-      Serial.print(temperatureData);
-      Serial.println(" *C");
-
-      Serial.print("Humidity: ");
-      Serial.print(humidityData);
-      Serial.println("%");
-
+      serialPrintSensorData(temperatureData, humidityData);
       tftPrintTest(temperatureData, humidityData);
     }
     delay(5000);
+}
+
+void tftPrintHeader(){
+  tft.setTextWrap(false);
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(100, 0);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+  tft.println("Data");
+}
+
+void serialPrintSensorData(float temperature, float humidity){
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.println(" *C");
+
+  Serial.print("Humidity: ");
+  Serial.print(humidity);
+  Serial.println("%");
 }
 
 
