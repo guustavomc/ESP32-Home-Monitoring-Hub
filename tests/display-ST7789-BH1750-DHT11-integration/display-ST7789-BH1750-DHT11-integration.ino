@@ -71,10 +71,10 @@ void loop() {
     tftPrintHeader();
 
     if (isnan(temperatureData) || isnan(humidityData)) {
-      Serial.println("Error reading DHT11 data");
+      Serial.println("Error reading DHT11 temperature and humidity data");
     } 
     else if (lightData < 0) {
-      Serial.println("Error reading BH1750light data");
+      Serial.println("Error reading BH1750 light data");
     } 
     else {
       serialPrintSensorData(temperatureData, humidityData, lightData);
@@ -86,10 +86,10 @@ void loop() {
 void tftPrintHeader(){
   tft.setTextWrap(false);
   tft.fillScreen(ST77XX_BLACK);
-  tft.setCursor(100, 0);
+  tft.setCursor(70, 0);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
-  tft.println("Data");
+  tft.println("Sensor Data");
 }
 
 void serialPrintSensorData(float temperature, float humidity, float light){
@@ -111,18 +111,16 @@ void tftPrintTest(float temperature, float humidity, float light) {
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
+
   tft.print("Temp.: ");
   tft.print(temperature);  
   tft.println(" *C");
-  //tft.setTextColor(ST77XX_WHITE);
-  //tft.setTextSize(2);
+  
   tft.print("Humid.: ");
   tft.print(humidity);
   tft.println(" %");
-  //tft.setTextColor(ST77XX_WHITE);
-  //tft.setTextSize(2);
+
   tft.print("Light: ");
   tft.print(light);
   tft.println(" lx");
-
 }
