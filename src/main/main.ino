@@ -9,6 +9,8 @@
 #include <DHT.h>
 #include <DHT_U.h>
 
+#include <Adafruit_BMP280.h>
+
 // ================= TFT Pins ==================
 
 #define TFT_CS         14
@@ -27,6 +29,11 @@ BH1750 lightMeter;
 #define DHTTYPE    DHT11                           
 #define DHTPIN 2                                   
 DHT_Unified dht(DHTPIN, DHTTYPE);    
+
+#define BMP280_ADDRESS 0x76
+Adafruit_BMP280 bmp;
+//SCK (SCL Pin)	  - GPIO 22
+//SDI (SDA pin)	  - GPIO 21
 
 // ================= Global ====================
 
@@ -50,37 +57,53 @@ void setup(void) {
   // I2C devices
   Wire.begin();
   lightMeter.begin();
+
+  // BMP280
+  if (!bmp.begin(BMP280_ADDRESS)) {
+    Serial.println(F("Could not find a valid BMP280 sensor!"));
+    while (1) delay(10);
+  }
+  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
+                  Adafruit_BMP280::SAMPLING_X2,
+                  Adafruit_BMP280::SAMPLING_X16,
+                  Adafruit_BMP280::FILTER_X16,
+                  Adafruit_BMP280::STANDBY_MS_500);
 }
 
 void loop() {
-    delay(delayMS);
+  delay(delayMS);
 
-    // ===== DHT11 =====
-    sensors_event_t tempEvent;
-    sensors_event_t humidEvent;
+  // ===== DHT11 =====
+  sensors_event_t tempEvent;
+  sensors_event_t humidEvent;
 
-    dht.temperature().getEvent(&tempEvent);
-    dht.humidity().getEvent(&humidEvent);
+  dht.temperature().getEvent(&tempEvent);
+  dht.humidity().getEvent(&humidEvent);
 
-    float temperatureData = tempEvent.temperature;
-    float humidityData = humidEvent.relative_humidity;
+  float temperatureData = tempEvent.temperature;
+  float humidityData = humidEvent.relative_humidity;
 
-    // ===== BH1750 =====
-    float lightData = lightMeter.readLightLevel();
+  // ===== BH1750 =====
+  float lightData = lightMeter.readLightLevel();
 
-    tftPrintDisplayHeader();
+  // ===== BMP280 =====
+  float bmpTemp = bmp.readTemperature();
+  float bmpPressure = bmp.readPressure(); 
+  float bmpAltitude = bmp.readAltitude(1013.25);
 
-    if (isnan(temperatureData) || isnan(humidityData)) {
-      Serial.println("Error reading DHT11 temperature and humidity data");
-    } 
-    else if (lightData < 0) {
-      Serial.println("Error reading BH1750 light data");
-    } 
-    else {
-      serialPrintSensorData(temperatureData, humidityData, lightData);
-      tftPrintSensorData(temperatureData, humidityData, lightData);
-    }
-    delay(5000);
+  tftPrintDisplayHeader();
+
+  if (isnan(temperatureData) || isnan(humidityData)) {
+    Serial.println("Error reading DHT11 temperature and humidity data");
+  } 
+  else if (lightData < 0) {
+    Serial.println("Error reading BH1750 light data");
+  } 
+  else {
+    serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+    tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+  }
+  delay(5000);
 }
 
 void tftPrintDisplayHeader(){
@@ -92,7 +115,7 @@ void tftPrintDisplayHeader(){
   tft.println("Sensor Data");
 }
 
-void serialPrintSensorData(float temperature, float humidity, float light){
+void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
   Serial.print("Temperature: ");
   Serial.print(temperature);
   Serial.println(" *C");
@@ -104,9 +127,21 @@ void serialPrintSensorData(float temperature, float humidity, float light){
   Serial.print("Light: ");
   Serial.print(light);
   Serial.println("lx");
+
+  Serial.print("BMP280 Temp: ");
+  Serial.print(bmpTemp);
+  Serial.println(" *C");
+
+  Serial.print("Pressure: ");
+  Serial.print(pressure);
+  Serial.println(" Pa");
+
+  Serial.print("Altitude: ");
+  Serial.print(altitude);
+  Serial.println(" m");
 }
 
-void tftPrintSensorData(float temperature, float humidity, float light) {
+void tftPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude) {
   tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
@@ -123,4 +158,16 @@ void tftPrintSensorData(float temperature, float humidity, float light) {
   tft.print("Light: ");
   tft.print(light);
   tft.println(" lx");
+
+  tft.print("BMP280: ");
+  tft.print(bmpTemp);
+  tft.println(" *C");
+
+  tft.print("Press.: ");
+  tft.print(pressure/100.0F);
+  tft.println(" hPa");
+
+  tft.print("Alt.: ");
+  tft.print(altitude);
+  tft.println(" m");
 }
