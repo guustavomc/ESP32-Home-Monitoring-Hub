@@ -37,7 +37,26 @@ Adafruit_BMP280 bmp;
 
 // ================= Global ====================
 
-uint32_t delayMS;                                  
+uint32_t delayMS;
+
+// Define struct globally for DHT11 data
+struct DHTData {
+  float temperature;
+  float humidity;
+};
+
+// Define struct globally for BH1750 data
+struct BH1750Data{
+  float light;
+};
+
+// Define struct globally for BMP280 data
+struct BMP280Data{
+  float temperature;
+  float pressure; 
+  float altitude;
+};
+
 
 void setup(void) {
 
@@ -56,6 +75,8 @@ void setup(void) {
 
   // I2C devices
   Wire.begin();
+
+  // BH1750
   lightMeter.begin();
 
   // BMP280
@@ -74,36 +95,72 @@ void loop() {
   delay(delayMS);
 
   // ===== DHT11 =====
+  DHTData dhtData = readDHT11Data();
+  float temperatureData = dhtData.temperature;
+  float humidityData = dhtData.humidity;
+
+  // ===== BH1750 =====
+  BH1750Data bh1750Data = readBH1750Data();
+  float lightData = bh1750Data.light;
+
+  // ===== BMP280 =====
+  BMP280Data bmp280Data = readBMP280Data();
+  float bmpTemp = bmp280Data.temperature;
+  float bmpPressure = bmp280Data.pressure;
+  float bmpAltitude = bmp280Data.altitude;
+
+  tftPrintDisplayHeader();
+  serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+  tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+  
+  delay(5000);
+}
+
+DHTData readDHT11Data(){
   sensors_event_t tempEvent;
   sensors_event_t humidEvent;
+  DHTData data;
 
   dht.temperature().getEvent(&tempEvent);
   dht.humidity().getEvent(&humidEvent);
 
   float temperatureData = tempEvent.temperature;
   float humidityData = humidEvent.relative_humidity;
-
-  // ===== BH1750 =====
-  float lightData = lightMeter.readLightLevel();
-
-  // ===== BMP280 =====
-  float bmpTemp = bmp.readTemperature();
-  float bmpPressure = bmp.readPressure(); 
-  float bmpAltitude = bmp.readAltitude(1013.25);
-
-  tftPrintDisplayHeader();
-
   if (isnan(temperatureData) || isnan(humidityData)) {
     Serial.println("Error reading DHT11 temperature and humidity data");
+    data.temperature = NAN;
+    data.humidity = NAN;
   } 
-  else if (lightData < 0) {
+
+  data.temperature = temperatureData;
+  data.humidity = humidityData;
+
+  return data;
+}
+
+BH1750Data readBH1750Data(){
+  float lightData = lightMeter.readLightLevel();
+  BH1750Data data;
+  if (lightData < 0) {
     Serial.println("Error reading BH1750 light data");
+    data.light = NAN;
   } 
-  else {
-    serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
-    tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
-  }
-  delay(5000);
+  data.light = lightData;
+
+  return data;
+}
+
+BMP280Data readBMP280Data(){
+  float temperature = bmp.readTemperature();
+  float pressure = bmp.readPressure(); 
+  float altitude = bmp.readAltitude(1013.25);
+  BMP280Data data;
+
+  data.temperature = temperature;
+  data.pressure = pressure;
+  data.altitude = altitude;
+
+  return data;
 }
 
 void tftPrintDisplayHeader(){
