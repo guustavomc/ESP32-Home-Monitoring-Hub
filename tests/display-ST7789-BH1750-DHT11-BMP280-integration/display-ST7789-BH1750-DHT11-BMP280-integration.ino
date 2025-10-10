@@ -56,6 +56,8 @@ void setup(void) {
 
   // I2C devices
   Wire.begin();
+
+  // BH1750
   lightMeter.begin();
 
   // BMP280
