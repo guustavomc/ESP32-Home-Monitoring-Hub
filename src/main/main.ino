@@ -72,6 +72,7 @@ void setup(void) {
   // TFT
   tft.init(240, 280);
   tft.fillScreen(ST77XX_BLACK);
+  tft.setRotation(2);
 
   // DHT11
   dht.begin();  
