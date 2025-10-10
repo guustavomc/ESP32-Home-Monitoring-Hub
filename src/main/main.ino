@@ -35,6 +35,9 @@ Adafruit_BMP280 bmp;
 //SCK (SCL Pin)	  - GPIO 22
 //SDI (SDA pin)	  - GPIO 21
 
+// ================= Buttons ===================
+int activateDisplayButton = 34;
+
 // ================= Global ====================
 
 uint32_t delayMS;
@@ -62,6 +65,9 @@ void setup(void) {
 
   Serial.begin(9600);
   Serial.print(F("Starting system..."));
+
+  //Button 
+  pinMode(activateDisplayButton, INPUT);
 
   // TFT
   tft.init(240, 280);
@@ -109,11 +115,25 @@ void loop() {
   float bmpPressure = bmp280Data.pressure;
   float bmpAltitude = bmp280Data.altitude;
 
-  tftPrintDisplayHeader();
-  serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
-  tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+  if (readActivateDisplayButton())
+  {
+    tftPrintDisplayHeader();
+    serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+    tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+  }
   
   delay(5000);
+}
+
+bool readActivateDisplayButton(){
+  bool buttonState = digitalRead(activateDisplayButton);
+  if (buttonState){
+    return true;
+  }
+  else{
+    return false;
+  }
+  
 }
 
 DHTData readDHT11Data(){
