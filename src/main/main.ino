@@ -36,7 +36,7 @@ Adafruit_BMP280 bmp;
 //SDI (SDA pin)	  - GPIO 21
 
 // ================= Buttons ===================
-int activateDisplayButton = 34;
+#define activateDisplayButton = 34;
 
 // ================= Global ====================
 
@@ -128,7 +128,7 @@ void loop() {
 
 bool readActivateDisplayButton(){
   bool buttonState = digitalRead(activateDisplayButton);
-  if (buttonState){
+  if (buttonState==HIGH){
     return true;
   }
   else{
