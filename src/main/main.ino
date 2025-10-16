@@ -36,7 +36,7 @@ Adafruit_BMP280 bmp;
 //SDI (SDA pin)	  - GPIO 21
 
 // ================= Buttons ===================
-#define activateDisplayButton = 34;
+#define activateDisplayButton 34
 
 // ================= Global ====================
 
@@ -122,13 +122,15 @@ void loop() {
     serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
     tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
   }
+  else{
+    tftBlankDisplay();
+  }
   
   delay(5000);
 }
 
 bool readActivateDisplayButton(){
-  bool buttonState = digitalRead(activateDisplayButton);
-  if (buttonState==HIGH){
+  if (digitalRead(activateDisplayButton)==HIGH){
     return true;
   }
   else{
@@ -191,6 +193,15 @@ void tftPrintDisplayHeader(){
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
   tft.println("Sensor Data");
+}
+
+void tftBlankDisplay(){
+  tft.setTextWrap(false);
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(0, 0);
+  tft.setTextColor(ST77XX_BLACK);
+  tft.setTextSize(0);
+  tft.println(" ");
 }
 
 void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
