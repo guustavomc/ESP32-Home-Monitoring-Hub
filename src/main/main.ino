@@ -35,6 +35,9 @@ Adafruit_BMP280 bmp;
 //SCK (SCL Pin)	  - GPIO 22
 //SDI (SDA pin)	  - GPIO 21
 
+// ================= Buttons ===================
+#define activateDisplayButton 34
+
 // ================= Global ====================
 
 uint32_t delayMS;
@@ -63,9 +66,13 @@ void setup(void) {
   Serial.begin(9600);
   Serial.print(F("Starting system..."));
 
+  //Button 
+  pinMode(activateDisplayButton, INPUT);
+
   // TFT
   tft.init(240, 280);
   tft.fillScreen(ST77XX_BLACK);
+  tft.setRotation(2);
 
   // DHT11
   dht.begin();  
@@ -109,11 +116,27 @@ void loop() {
   float bmpPressure = bmp280Data.pressure;
   float bmpAltitude = bmp280Data.altitude;
 
-  tftPrintDisplayHeader();
-  serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
-  tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+  if (readActivateDisplayButton())
+  {
+    tftPrintDisplayHeader();
+    serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+    tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+  }
+  else{
+    tftBlankDisplay();
+  }
   
   delay(5000);
+}
+
+bool readActivateDisplayButton(){
+  if (digitalRead(activateDisplayButton)==HIGH){
+    return true;
+  }
+  else{
+    return false;
+  }
+  
 }
 
 DHTData readDHT11Data(){
@@ -170,6 +193,15 @@ void tftPrintDisplayHeader(){
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
   tft.println("Sensor Data");
+}
+
+void tftBlankDisplay(){
+  tft.setTextWrap(false);
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setCursor(0, 0);
+  tft.setTextColor(ST77XX_BLACK);
+  tft.setTextSize(0);
+  tft.println(" ");
 }
 
 void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
