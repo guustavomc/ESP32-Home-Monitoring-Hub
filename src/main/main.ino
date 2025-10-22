@@ -29,6 +29,7 @@ BH1750 lightMeter;
 #define DHTTYPE    DHT11                           
 #define DHTPIN 2                                   
 DHT_Unified dht(DHTPIN, DHTTYPE);    
+uint32_t delayDHT;
 
 #define BMP280_ADDRESS 0x76
 Adafruit_BMP280 bmp;
@@ -37,13 +38,14 @@ Adafruit_BMP280 bmp;
 
 // ================= Buttons ===================
 #define activateDisplayButton 34
+bool lastButtonState = false;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 50;  // 50ms debounce period
 
 // ================= Global ====================
 
-uint32_t delayMS;
-
 // Define struct globally for DHT11 data
-struct DHTData {
+struct DHT11Data {
   float temperature;
   float humidity;
 };
@@ -59,6 +61,14 @@ struct BMP280Data{
   float pressure; 
   float altitude;
 };
+
+// Define millis delay globally
+unsigned long sensorReadDelay = 5000;
+unsigned long previousMillis = 0;
+
+DHT11Data lastDHT11Data = {NAN, NAN};
+BH1750Data lastBH1750Data = {NAN};
+BMP280Data lastBMP280Data = {NAN, NAN, NAN};
 
 
 void setup(void) {
@@ -78,7 +88,8 @@ void setup(void) {
   dht.begin();  
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
-  dht.humidity().getSensor(&sensor);           
+  dht.humidity().getSensor(&sensor);      
+  delayDHT = sensor.min_delay / 1000;  // Set minimum DHT11 sampling period (in ms)
 
   // I2C devices
   Wire.begin();
@@ -96,53 +107,54 @@ void setup(void) {
                   Adafruit_BMP280::SAMPLING_X16,
                   Adafruit_BMP280::FILTER_X16,
                   Adafruit_BMP280::STANDBY_MS_500);
+  
+  //Initial Sensor read
+  updateSensorData();
 }
 
 void loop() {
-  delay(delayMS);
 
-  // ===== DHT11 =====
-  DHTData dhtData = readDHT11Data();
-  float temperatureData = dhtData.temperature;
-  float humidityData = dhtData.humidity;
-
-  // ===== BH1750 =====
-  BH1750Data bh1750Data = readBH1750Data();
-  float lightData = bh1750Data.light;
-
-  // ===== BMP280 =====
-  BMP280Data bmp280Data = readBMP280Data();
-  float bmpTemp = bmp280Data.temperature;
-  float bmpPressure = bmp280Data.pressure;
-  float bmpAltitude = bmp280Data.altitude;
+  //Initiate millis delay
+  unsigned long currentMillis = millis();
+  if(currentMillis-previousMillis >= sensorReadDelay){
+    previousMillis = currentMillis;
+    updateSensorData();
+  }
 
   if (readActivateDisplayButton())
   {
     tftPrintDisplayHeader();
-    serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
-    tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+    serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
   }
   else{
     tftBlankDisplay();
   }
-  
-  delay(5000);
+}
+
+void updateSensorData(){
+  lastDHT11Data = readDHT11Data();
+  lastBH1750Data = readBH1750Data();
+  lastBMP280Data = readBMP280Data();
 }
 
 bool readActivateDisplayButton(){
-  if (digitalRead(activateDisplayButton)==HIGH){
-    return true;
+  bool reading = digitalRead(activateDisplayButton)==HIGH;
+
+  if (lastButtonState != reading){
+    lastDebounceTime = millis();
   }
-  else{
-    return false;
+  if(millis()-lastDebounceTime>debounceDelay){
+    lastButtonState = reading;
   }
+  return lastButtonState;
   
 }
 
-DHTData readDHT11Data(){
+DHT11Data readDHT11Data(){
   sensors_event_t tempEvent;
   sensors_event_t humidEvent;
-  DHTData data;
+  DHT11Data data;
 
   dht.temperature().getEvent(&tempEvent);
   dht.humidity().getEvent(&humidEvent);
@@ -205,29 +217,29 @@ void tftBlankDisplay(){
 }
 
 void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
-  Serial.print("Temperature: ");
+  Serial.print(F("Temperature: "));
   Serial.print(temperature);
-  Serial.println(" *C");
+  Serial.println(F(" *C"));
 
-  Serial.print("Humidity: ");
+  Serial.print(F("Humidity: "));
   Serial.print(humidity);
-  Serial.println("%");
+  Serial.println(F("%"));
 
-  Serial.print("Light: ");
+  Serial.print(F("Light: "));
   Serial.print(light);
-  Serial.println("lx");
+  Serial.println(F("lx"));
 
-  Serial.print("BMP280 Temp: ");
+  Serial.print(F("BMP280 Temp: "));
   Serial.print(bmpTemp);
-  Serial.println(" *C");
+  Serial.println(F(" *C"));
 
-  Serial.print("Pressure: ");
+  Serial.print(F("Pressure: "));
   Serial.print(pressure);
-  Serial.println(" Pa");
+  Serial.println(F(" Pa"));
 
-  Serial.print("Altitude: ");
+  Serial.print(F("Altitude: "));
   Serial.print(altitude);
-  Serial.println(" m");
+  Serial.println(F(" m"));
 }
 
 void tftPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude) {
@@ -236,27 +248,27 @@ void tftPrintSensorData(float temperature, float humidity, float light, float bm
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
-  tft.print("Temp.: ");
+  tft.print(F("Temp.: "));
   tft.print(temperature);  
-  tft.println(" *C");
+  tft.println(F(" *C"));
   
-  tft.print("Humid.: ");
+  tft.print(F("Humid.: "));
   tft.print(humidity);
-  tft.println(" %");
+  tft.println(F(" %"));
 
-  tft.print("Light: ");
+  tft.print(F("Light: "));
   tft.print(light);
-  tft.println(" lx");
+  tft.println(F(" lx"));
 
-  tft.print("BMP280: ");
+  tft.print(F("BMP280: "));
   tft.print(bmpTemp);
-  tft.println(" *C");
+  tft.println(F(" *C"));
 
-  tft.print("Press.: ");
-  tft.print(pressure/100.0F);
-  tft.println(" hPa");
+  tft.print(F("Press.: "));
+  tft.print(pressure / 100.0F);
+  tft.println(F(" hPa"));
 
-  tft.print("Alt.: ");
+  tft.print(F("Alt.: "));
   tft.print(altitude);
-  tft.println(" m");
+  tft.println(F(" m"));
 }
