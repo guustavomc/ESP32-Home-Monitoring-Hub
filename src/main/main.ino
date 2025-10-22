@@ -121,7 +121,7 @@ void loop() {
     updateSensorData();
   }
 
-  if (readActivateDisplayButton())
+  /*if (readActivateDisplayButton())
   {
     tftPrintDisplayHeader();
     serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
@@ -130,6 +130,10 @@ void loop() {
   else{
     tftBlankDisplay();
   }
+  */
+  tftPrintDisplayHeader();
+  serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+  tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
 }
 
 void updateSensorData(){
@@ -217,58 +221,58 @@ void tftBlankDisplay(){
 }
 
 void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
-  Serial.print(F("Temperature: "));
+  Serial.print("Temperature: ");
   Serial.print(temperature);
-  Serial.println(F(" *C"));
+  Serial.println(" *C");
 
-  Serial.print(F("Humidity: "));
+  Serial.print("Humidity: ");
   Serial.print(humidity);
-  Serial.println(F("%"));
+  Serial.println("%");
 
-  Serial.print(F("Light: "));
+  Serial.print("Light: ");
   Serial.print(light);
-  Serial.println(F("lx"));
+  Serial.println("lx");
 
-  Serial.print(F("BMP280 Temp: "));
+  Serial.print("BMP280 Temp: ");
   Serial.print(bmpTemp);
-  Serial.println(F(" *C"));
+  Serial.println(" *C");
 
-  Serial.print(F("Pressure: "));
+  Serial.print("Pressure: ");
   Serial.print(pressure);
-  Serial.println(F(" Pa"));
+  Serial.println(" Pa");
 
-  Serial.print(F("Altitude: "));
+  Serial.print("Altitude: ");
   Serial.print(altitude);
-  Serial.println(F(" m"));
+  Serial.println(" m");
 }
 
 void tftPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude) {
-  tft.setTextWrap(false);
+   tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
-  tft.print(F("Temp.: "));
+  tft.print("Temp.: ");
   tft.print(temperature);  
-  tft.println(F(" *C"));
+  tft.println(" *C");
   
-  tft.print(F("Humid.: "));
+  tft.print("Humid.: ");
   tft.print(humidity);
-  tft.println(F(" %"));
+  tft.println(" %");
 
-  tft.print(F("Light: "));
+  tft.print("Light: ");
   tft.print(light);
-  tft.println(F(" lx"));
+  tft.println(" lx");
 
-  tft.print(F("BMP280: "));
+  tft.print("BMP280: ");
   tft.print(bmpTemp);
-  tft.println(F(" *C"));
+  tft.println(" *C");
 
-  tft.print(F("Press.: "));
-  tft.print(pressure / 100.0F);
-  tft.println(F(" hPa"));
+  tft.print("Press.: ");
+  tft.print(pressure/100.0F);
+  tft.println(" hPa");
 
-  tft.print(F("Alt.: "));
+  tft.print("Alt.: ");
   tft.print(altitude);
-  tft.println(F(" m"));
+  tft.println(" m");
 }
