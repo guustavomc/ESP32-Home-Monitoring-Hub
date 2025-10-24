@@ -36,12 +36,6 @@ Adafruit_BMP280 bmp;
 //SCK (SCL Pin)	  - GPIO 22
 //SDI (SDA pin)	  - GPIO 21
 
-// ================= Buttons ===================
-#define activateDisplayButton 34
-bool lastButtonState = false;
-unsigned long lastDebounceTime = 0;
-const unsigned long debounceDelay = 50;  // 50ms debounce period
-
 // ================= Global ====================
 
 // Define struct globally for DHT11 data
@@ -62,9 +56,17 @@ struct BMP280Data{
   float altitude;
 };
 
+// Buttons
+#define activateDisplayButton 34
+bool lastButtonState = false;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 50;  // 50ms debounce period
+
 // Define millis delay globally
 unsigned long sensorReadDelay = 5000;
 unsigned long previousMillis = 0;
+bool newSensorData = false;  // Tracks if new sensor data is available
+bool currentDisplayState = false;  // Tracks if display is currently active
 
 DHT11Data lastDHT11Data = {NAN, NAN};
 BH1750Data lastBH1750Data = {NAN};
@@ -110,30 +112,55 @@ void setup(void) {
   
   //Initial Sensor read
   updateSensorData();
+  newSensorData = true;  // Flag initial data
 }
 
 void loop() {
 
   //Initiate millis delay
   unsigned long currentMillis = millis();
-  if(currentMillis-previousMillis >= sensorReadDelay){
+  if(currentMillis-previousMillis >= max(sensorReadDelay, delayDHT)){
     previousMillis = currentMillis;
     updateSensorData();
+    newSensorData = true;
   }
 
-  /*if (readActivateDisplayButton())
-  {
-    tftPrintDisplayHeader();
-    serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-  }
-  else{
-    tftBlankDisplay();
+  bool buttonState = readActivateDisplayButton();
+
+  /*
+  // Update display only on button state change or new sensor data
+  if (buttonState != currentDisplayState || (buttonState && newSensorData)) {
+    currentDisplayState = buttonState;
+    if (buttonState) {
+      // Only clear screen and draw header on button state change
+      if (buttonState != lastButtonState || !currentDisplayState) {
+        tftPrintDisplayHeader();
+      }
+      serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+
+      tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    }
+    else {
+      tftBlankDisplay();
+    }
+    newSensorData = false;  // Reset flag after updating display
   }
   */
-  tftPrintDisplayHeader();
-  serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-  tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light, lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+
+  if(newSensorData){
+    tftPrintDisplayHeader();
+    serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    newSensorData = false;  // Reset flag after updating display
+
+  }
+
+
+  
 }
 
 void updateSensorData(){
