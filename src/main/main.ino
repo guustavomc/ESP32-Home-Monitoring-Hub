@@ -29,21 +29,17 @@ BH1750 lightMeter;
 #define DHTTYPE    DHT11                           
 #define DHTPIN 2                                   
 DHT_Unified dht(DHTPIN, DHTTYPE);    
+uint32_t delayDHT;
 
 #define BMP280_ADDRESS 0x76
 Adafruit_BMP280 bmp;
 //SCK (SCL Pin)	  - GPIO 22
 //SDI (SDA pin)	  - GPIO 21
 
-// ================= Buttons ===================
-#define activateDisplayButton 34
-
 // ================= Global ====================
 
-uint32_t delayMS;
-
 // Define struct globally for DHT11 data
-struct DHTData {
+struct DHT11Data {
   float temperature;
   float humidity;
 };
@@ -59,6 +55,22 @@ struct BMP280Data{
   float pressure; 
   float altitude;
 };
+
+// Buttons
+#define activateDisplayButton 34
+bool lastButtonState = false;
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 50;  // 50ms debounce period
+
+// Define millis delay globally
+unsigned long sensorReadDelay = 5000;
+unsigned long previousMillis = 0;
+bool newSensorData = false;  // Tracks if new sensor data is available
+bool currentDisplayState = false;  // Tracks if display is currently active
+
+DHT11Data lastDHT11Data = {NAN, NAN};
+BH1750Data lastBH1750Data = {NAN};
+BMP280Data lastBMP280Data = {NAN, NAN, NAN};
 
 
 void setup(void) {
@@ -78,7 +90,8 @@ void setup(void) {
   dht.begin();  
   sensor_t sensor;
   dht.temperature().getSensor(&sensor);
-  dht.humidity().getSensor(&sensor);           
+  dht.humidity().getSensor(&sensor);      
+  delayDHT = sensor.min_delay / 1000;  // Set minimum DHT11 sampling period (in ms)
 
   // I2C devices
   Wire.begin();
@@ -96,53 +109,83 @@ void setup(void) {
                   Adafruit_BMP280::SAMPLING_X16,
                   Adafruit_BMP280::FILTER_X16,
                   Adafruit_BMP280::STANDBY_MS_500);
+  
+  //Initial Sensor read
+  updateSensorData();
+  newSensorData = true;  // Flag initial data
 }
 
 void loop() {
-  delay(delayMS);
 
-  // ===== DHT11 =====
-  DHTData dhtData = readDHT11Data();
-  float temperatureData = dhtData.temperature;
-  float humidityData = dhtData.humidity;
+  //Initiate millis delay
+  unsigned long currentMillis = millis();
+  if(currentMillis-previousMillis >= max(sensorReadDelay, delayDHT)){
+    previousMillis = currentMillis;
+    updateSensorData();
+    newSensorData = true;
+  }
 
-  // ===== BH1750 =====
-  BH1750Data bh1750Data = readBH1750Data();
-  float lightData = bh1750Data.light;
+  bool buttonState = readActivateDisplayButton();
 
-  // ===== BMP280 =====
-  BMP280Data bmp280Data = readBMP280Data();
-  float bmpTemp = bmp280Data.temperature;
-  float bmpPressure = bmp280Data.pressure;
-  float bmpAltitude = bmp280Data.altitude;
+  /*
+  // Update display only on button state change or new sensor data
+  if (buttonState != currentDisplayState || (buttonState && newSensorData)) {
+    currentDisplayState = buttonState;
+    if (buttonState) {
+      // Only clear screen and draw header on button state change
+      if (buttonState != lastButtonState || !currentDisplayState) {
+        tftPrintDisplayHeader();
+      }
+      serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
 
-  if (readActivateDisplayButton())
-  {
+      tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    }
+    else {
+      tftBlankDisplay();
+    }
+    newSensorData = false;  // Reset flag after updating display
+  }
+  */
+
+  if(newSensorData){
     tftPrintDisplayHeader();
-    serialPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
-    tftPrintSensorData(temperatureData, humidityData, lightData, bmpTemp, bmpPressure, bmpAltitude);
+    serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    newSensorData = false;  // Reset flag after updating display
+
   }
-  else{
-    tftBlankDisplay();
-  }
+
+
   
-  delay(5000);
+}
+
+void updateSensorData(){
+  lastDHT11Data = readDHT11Data();
+  lastBH1750Data = readBH1750Data();
+  lastBMP280Data = readBMP280Data();
 }
 
 bool readActivateDisplayButton(){
-  if (digitalRead(activateDisplayButton)==HIGH){
-    return true;
+  bool reading = digitalRead(activateDisplayButton)==HIGH;
+
+  if (lastButtonState != reading){
+    lastDebounceTime = millis();
   }
-  else{
-    return false;
+  if(millis()-lastDebounceTime>debounceDelay){
+    lastButtonState = reading;
   }
+  return lastButtonState;
   
 }
 
-DHTData readDHT11Data(){
+DHT11Data readDHT11Data(){
   sensors_event_t tempEvent;
   sensors_event_t humidEvent;
-  DHTData data;
+  DHT11Data data;
 
   dht.temperature().getEvent(&tempEvent);
   dht.humidity().getEvent(&humidEvent);
@@ -231,7 +274,7 @@ void serialPrintSensorData(float temperature, float humidity, float light, float
 }
 
 void tftPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude) {
-  tft.setTextWrap(false);
+   tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
