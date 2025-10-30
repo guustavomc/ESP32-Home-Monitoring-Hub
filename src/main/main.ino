@@ -80,6 +80,8 @@ void setup(void) {
 
   //Button 
   pinMode(activateDisplayButton, INPUT);
+  lastButtonState = digitalRead(activateDisplayButton);  // Init state
+  lastDebounceTime = millis();
 
   // TFT
   tft.init(240, 280);
@@ -127,40 +129,19 @@ void loop() {
 
   bool buttonState = readActivateDisplayButton();
 
-  /*
-  // Update display only on button state change or new sensor data
-  if (buttonState != currentDisplayState || (buttonState && newSensorData)) {
-    currentDisplayState = buttonState;
-    if (buttonState) {
-      // Only clear screen and draw header on button state change
-      if (buttonState != lastButtonState || !currentDisplayState) {
-        tftPrintDisplayHeader();
-      }
-      serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-
-      tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    }
-    else {
-      tftBlankDisplay();
-    }
-    newSensorData = false;  // Reset flag after updating display
+  if(!buttonState && currentDisplayState){
+    currentDisplayState = false;
+    tftBlankDisplay();
   }
-  */
-
-  if(newSensorData){
+  else if(buttonState && !currentDisplayState){
+    currentDisplayState = true;
     tftPrintDisplayHeader();
     serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
                             lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
     tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
                          lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
     newSensorData = false;  // Reset flag after updating display
-
   }
-
-
-  
 }
 
 void updateSensorData(){
@@ -170,14 +151,16 @@ void updateSensorData(){
 }
 
 bool readActivateDisplayButton(){
-  bool reading = digitalRead(activateDisplayButton)==HIGH;
+  int reading = digitalRead(activateDisplayButton);
 
-  if (lastButtonState != reading){
+  if (reading != lastButtonState) {
     lastDebounceTime = millis();
   }
-  if(millis()-lastDebounceTime>debounceDelay){
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
     lastButtonState = reading;
   }
+
   return lastButtonState;
   
 }
