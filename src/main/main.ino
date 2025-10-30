@@ -222,12 +222,7 @@ void tftPrintDisplayHeader(){
 }
 
 void tftBlankDisplay(){
-  tft.setTextWrap(false);
   tft.fillScreen(ST77XX_BLACK);
-  tft.setCursor(0, 0);
-  tft.setTextColor(ST77XX_BLACK);
-  tft.setTextSize(0);
-  tft.println(" ");
 }
 
 void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
