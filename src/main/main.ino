@@ -123,6 +123,7 @@ void loop() {
     updateSensorData();
     newSensorData = true;
   }
+Serial.println(digitalRead(activateDisplayButton));
 
   // === DETECÇÃO DE TOQUE NO BOTÃO ===
   if (checkButtonPress()) {
@@ -156,23 +157,31 @@ void updateSensorData(){
 }
 
 bool checkButtonPress() {
-  static bool lastState = false;
-  static unsigned long lastPressTime = 0;
-  const unsigned long debounceDelay = 50;
+  static bool lastStableState = LOW;       // Estado estável anterior
+  static bool lastReading = LOW;           // Última leitura bruta
+  static unsigned long lastDebounceTime = 0;
+  const unsigned long debounceDelay = 150; // Aumenta o debounce
 
-  bool currentState = digitalRead(activateDisplayButton);
+  bool currentReading = digitalRead(activateDisplayButton);
 
-  // Detecta borda de subida: estava LOW, agora HIGH
-  if (!lastState && currentState) {
-    unsigned long now = millis();
-    if (now - lastPressTime > debounceDelay) {
-      lastPressTime = now;
-      lastState = currentState;
-      return true;  // Botão foi pressionado!
+  // Se o estado mudou desde a última leitura, reseta o timer
+  if (currentReading != lastReading) {
+    lastDebounceTime = millis();
+  }
+
+  // Se passou tempo suficiente e o estado é diferente do estável
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (currentReading != lastStableState) {
+      lastStableState = currentReading;
+
+      // Detecta borda de subida (LOW -> HIGH)
+      if (lastStableState == HIGH) {
+        return true;
+      }
     }
   }
 
-  lastState = currentState;
+  lastReading = currentReading;
   return false;
 }
 
