@@ -58,9 +58,7 @@ struct BMP280Data{
 
 // Buttons
 #define activateDisplayButton 34
-bool lastButtonState = false;
-unsigned long lastDebounceTime = 0;
-const unsigned long debounceDelay = 50;  // 50ms debounce period
+bool buttonPressed = false;
 
 // Define millis delay globally
 unsigned long sensorReadDelay = 5000;
@@ -79,9 +77,8 @@ void setup(void) {
   Serial.print(F("Starting system..."));
 
   //Button 
-  pinMode(activateDisplayButton, INPUT);
-  lastButtonState = digitalRead(activateDisplayButton);  // Init state
-  lastDebounceTime = millis();
+  pinMode(activateDisplayButton, INPUT);// GPIO34 = input-only
+  
 
   // TFT
   tft.init(240, 280);
@@ -127,20 +124,28 @@ void loop() {
     newSensorData = true;
   }
 
-  bool buttonState = readActivateDisplayButton();
+  // === DETECÇÃO DE TOQUE NO BOTÃO ===
+  if (checkButtonPress()) {
+    currentDisplayState = !currentDisplayState;  // Toggle!
 
-  if(!buttonState && currentDisplayState){
-    currentDisplayState = false;
-    tftBlankDisplay();
-  }
-  else if(buttonState && !currentDisplayState){
-    currentDisplayState = true;
-    tftPrintDisplayHeader();
-    serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+    if (currentDisplayState) {
+      tftPrintDisplayHeader();
+      tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
                          lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    newSensorData = false;  // Reset flag after updating display
+      serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    } 
+    else {
+      tftBlankDisplay();
+    }
+    newSensorData = false;
+  }
+
+  // === ATUALIZA DISPLAY SE NOVOS DADOS E ESTIVER LIGADO ===
+  if (currentDisplayState && newSensorData) {
+    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
+                       lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    newSensorData = false;
   }
 }
 
@@ -150,19 +155,25 @@ void updateSensorData(){
   lastBMP280Data = readBMP280Data();
 }
 
-bool readActivateDisplayButton(){
-  int reading = digitalRead(activateDisplayButton);
+bool checkButtonPress() {
+  static bool lastState = false;
+  static unsigned long lastPressTime = 0;
+  const unsigned long debounceDelay = 50;
 
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
+  bool currentState = digitalRead(activateDisplayButton);
+
+  // Detecta borda de subida: estava LOW, agora HIGH
+  if (!lastState && currentState) {
+    unsigned long now = millis();
+    if (now - lastPressTime > debounceDelay) {
+      lastPressTime = now;
+      lastState = currentState;
+      return true;  // Botão foi pressionado!
+    }
   }
 
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    lastButtonState = reading;
-  }
-
-  return lastButtonState;
-  
+  lastState = currentState;
+  return false;
 }
 
 DHT11Data readDHT11Data(){
