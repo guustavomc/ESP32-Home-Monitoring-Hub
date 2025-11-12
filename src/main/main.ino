@@ -38,6 +38,14 @@ Adafruit_BMP280 bmp;
 
 // ================= Global ====================
 
+struct MainData {
+  float temperature;
+  float humidity;
+  float light;
+  float pressure;
+  float altitude;
+};
+
 // Define struct globally for DHT11 data
 struct DHT11Data {
   float temperature;
@@ -66,6 +74,8 @@ unsigned long previousMillis = 0;
 bool newSensorData = false;  // Tracks if new sensor data is available
 bool currentDisplayState = false;  // Tracks if display is currently active
 
+
+MainData lastMainData = {NAN, NAN, NAN, NAN, NAN};
 DHT11Data lastDHT11Data = {NAN, NAN};
 BH1750Data lastBH1750Data = {NAN};
 BMP280Data lastBMP280Data = {NAN, NAN, NAN};
@@ -110,7 +120,7 @@ void setup(void) {
                   Adafruit_BMP280::STANDBY_MS_500);
   
   //Initial Sensor read
-  updateSensorData();
+  updateIndividualSensorData();
   newSensorData = true;  // Flag initial data
 }
 
@@ -120,7 +130,7 @@ void loop() {
   unsigned long currentMillis = millis();
   if(currentMillis-previousMillis >= max(sensorReadDelay, delayDHT)){
     previousMillis = currentMillis;
-    updateSensorData();
+    updateIndividualSensorData();
     newSensorData = true;
   }
 Serial.println(digitalRead(activateDisplayButton));
@@ -132,10 +142,8 @@ Serial.println(digitalRead(activateDisplayButton));
     
     if (currentDisplayState) {
       tftPrintDisplayHeader();
-      tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-      serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+      tftPrintMainSensorData();
+      serialPrintSensorData();
     } 
     else {
       tftBlankDisplay();
@@ -147,10 +155,8 @@ Serial.println(digitalRead(activateDisplayButton));
   // === ATUALIZA DISPLAY SE NOVOS DADOS E ESTIVER LIGADO ===
   if (currentDisplayState && newSensorData) {
     tftPrintDisplayHeader();
-    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                        lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                        lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
+    tftPrintMainSensorData();
+    serialPrintSensorData();
     newSensorData = false;
   }
   if(currentDisplayState==false){
@@ -158,10 +164,19 @@ Serial.println(digitalRead(activateDisplayButton));
   }
 }
 
-void updateSensorData(){
+void updateIndividualSensorData(){
   lastDHT11Data = readDHT11Data();
   lastBH1750Data = readBH1750Data();
   lastBMP280Data = readBMP280Data();
+  updateMainData();
+}
+
+void updateMainData(){
+  lastMainData.temperature = (lastDHT11Data.temperature+lastBMP280Data.temperature) / 2;
+  lastMainData.humidity = lastDHT11Data.humidity;
+  lastMainData.light = lastBH1750Data.light;
+  lastMainData.pressure = lastBMP280Data.pressure;
+  lastMainData.altitude = lastBMP280Data.altitude;
 }
 
 bool checkButtonPress() {
@@ -253,59 +268,104 @@ void tftBlankDisplay(){
   tft.fillScreen(ST77XX_BLACK);
 }
 
-void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
+void serialPrintSensorData(){
   Serial.print("Temperature: ");
-  Serial.print(temperature);
+  Serial.print(lastMainData.temperature);
   Serial.println(" *C");
 
   Serial.print("Humidity: ");
-  Serial.print(humidity);
+  Serial.print(lastMainData.humidity);
   Serial.println("%");
 
   Serial.print("Light: ");
-  Serial.print(light);
+  Serial.print(lastMainData.light);
   Serial.println("lx");
 
-  Serial.print("BMP280 Temp: ");
-  Serial.print(bmpTemp);
-  Serial.println(" *C");
-
   Serial.print("Pressure: ");
-  Serial.print(pressure);
+  Serial.print(lastMainData.pressure);
   Serial.println(" Pa");
 
   Serial.print("Altitude: ");
-  Serial.print(altitude);
+  Serial.print(lastMainData.altitude);
   Serial.println(" m");
 }
 
-void tftPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude) {
-   tft.setTextWrap(false);
+void tftPrintMainSensorData() {
+  tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
   tft.print("Temp.: ");
-  tft.print(temperature);  
+  tft.print(lastMainData.temperature);  
   tft.println(" *C");
   
   tft.print("Humid.: ");
-  tft.print(humidity);
+  tft.print(lastMainData.humidity);
   tft.println(" %");
 
   tft.print("Light: ");
-  tft.print(light);
+  tft.print(lastMainData.light);
   tft.println(" lx");
 
-  tft.print("BMP280: ");
-  tft.print(bmpTemp);
-  tft.println(" *C");
-
   tft.print("Press.: ");
-  tft.print(pressure/100.0F);
+  tft.print(lastMainData.pressure/100.0F);
   tft.println(" hPa");
 
   tft.print("Alt.: ");
-  tft.print(altitude);
+  tft.print(lastMainData.altitude);
+  tft.println(" m");
+}
+
+void tftPrintDHT11Data(){
+  tft.setTextWrap(false);
+  tft.setCursor(0, 35);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+
+  tft.print("DHT11 Sensor");
+
+  tft.print("Temp.: ");
+  tft.print(lastDHT11Data.temperature);  
+  tft.println(" *C");
+  
+  tft.print("Humid.: ");
+  tft.print(lastDHT11Data.humidity);
+  tft.println(" %");
+}
+
+void tftPrintBH1750Data(){
+  tft.setTextWrap(false);
+  tft.setCursor(0, 35);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+
+  tft.print("BH1750 Sensor");
+
+  tft.print("Light.: ");
+  tft.print(lastBH1750Data.light);  
+  tft.println(" lx");
+}
+
+
+
+void tftPrintBMP280Data(){
+  tft.setTextWrap(false);
+  tft.setCursor(0, 35);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+
+  tft.print("BMP280 Sensor");
+
+  tft.print("Temp.: ");
+  tft.print(lastBMP280Data.temperature);  
+  tft.println(" *C");
+
+  tft.print("Press.: ");
+  tft.print(lastBMP280Data.pressure/100.0F);
+  tft.println(" hPa");
+
+  tft.print("Alt.: ");
+  tft.print(lastBMP280Data.altitude);
   tft.println(" m");
 }
