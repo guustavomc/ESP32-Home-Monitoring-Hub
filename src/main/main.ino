@@ -129,7 +129,7 @@ Serial.println(digitalRead(activateDisplayButton));
   if (checkButtonPress()) {
     currentDisplayState = !currentDisplayState;  // Toggle!
 
-    /*
+    
     if (currentDisplayState) {
       tftPrintDisplayHeader();
       tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
@@ -141,7 +141,7 @@ Serial.println(digitalRead(activateDisplayButton));
       tftBlankDisplay();
     }
     newSensorData = false;
-    */
+    
   }
 
   // === ATUALIZA DISPLAY SE NOVOS DADOS E ESTIVER LIGADO ===
