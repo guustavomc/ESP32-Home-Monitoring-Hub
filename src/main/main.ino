@@ -64,8 +64,13 @@ struct BMP280Data{
   float altitude;
 };
 
+uint8_t displayMode = 0;          // 0 = Main, 1 = DHT11, 2 = BH1750, 3 = BMP280
+const uint8_t MAX_MODES = 4;
+
 // Buttons
 #define activateDisplayButton 34
+#define changeDisplayInformation 33
+
 bool buttonPressed = false;
 
 // Define millis delay globally
@@ -88,7 +93,8 @@ void setup(void) {
 
   //Button 
   pinMode(activateDisplayButton, INPUT);// GPIO34 = input-only
-  
+  pinMode(changeDisplayInformation, INPUT);// GPIO33 = input-only
+
 
   // TFT
   tft.init(240, 280);
@@ -134,7 +140,6 @@ void loop() {
     updateIndividualSensorData();
     newSensorData = true;
   }
-  //Serial.println(digitalRead(activateDisplayButton));
 
   // === BUTTON PRESS: TOGGLE DISPLAY ===
   if (checkButtonPress()) {
@@ -174,24 +179,24 @@ void updateMainData(){
 }
 
 bool checkButtonPress() {
-  static bool lastStableState = LOW;       // Estado estável anterior
-  static bool lastReading = LOW;           // Última leitura bruta
+  static bool lastStableState = LOW;       // Last stable state
+  static bool lastReading = LOW;           // Last raw reading
   static unsigned long lastDebounceTime = 0;
-  const unsigned long debounceDelay = 150; // Aumenta o debounce
+  const unsigned long debounceDelay = 150; // Increase debounce delay
 
   bool currentReading = digitalRead(activateDisplayButton);
 
-  // Se o estado mudou desde a última leitura, reseta o timer
+  // If the state changed since the last reading, reset the timer
   if (currentReading != lastReading) {
     lastDebounceTime = millis();
   }
 
-  // Se passou tempo suficiente e o estado é diferente do estável
+  // Enough time has passed and the reading differs from the last stable state
   if ((millis() - lastDebounceTime) > debounceDelay) {
     if (currentReading != lastStableState) {
       lastStableState = currentReading;
 
-      // Detecta borda de subida (LOW -> HIGH)
+      // Detect rising edge (LOW -> HIGH)
       if (lastStableState == HIGH) {
         return true;
       }
@@ -200,6 +205,48 @@ bool checkButtonPress() {
 
   lastReading = currentReading;
   return false;
+}
+
+bool checkChangeButtonPress() {
+  static bool lastStableState = LOW;
+  static bool lastReading     = LOW;
+  static unsigned long lastDebounceTime = 0;
+  const unsigned long debounceDelay = 150;
+
+  bool currentReading = digitalRead(changeDisplayInformation);
+
+  if (currentReading != lastReading) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (currentReading != lastStableState) {
+      lastStableState = currentReading;
+      if (lastStableState == HIGH) {          // rising edge
+        return true;
+      }
+    }
+  }
+  lastReading = currentReading;
+  return false;
+}
+
+void tftPrintCurrentPage() {
+  tftPrintDisplayHeader();          // common header for every mode
+  switch (displayMode) {
+    case 0:  
+      tftPrintMainSensorData(); 
+      break;
+    case 1:  
+      tftPrintDHT11Data();      
+      break;
+    case 2:  
+      tftPrintBH1750Data();     
+      break;
+    case 3:  
+      tftPrintBMP280Data();     
+      break;
+  }
 }
 
 DHT11Data readDHT11Data(){
