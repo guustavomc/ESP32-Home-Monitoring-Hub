@@ -192,7 +192,7 @@ bool checkButtonPress() {
       lastStableState = currentReading;
 
       // Detecta borda de subida (LOW -> HIGH)
-      if (lastStableState == HIGH && currentReading == LOW) {
+      if (lastStableState == HIGH) {
         return true;
       }
     }
