@@ -122,7 +122,6 @@ void setup(void) {
   //Initial Sensor read
   updateIndividualSensorData();
   newSensorData = true;  // Flag initial data
-  currentDisplayState = false;  // Start off
 
 }
 
