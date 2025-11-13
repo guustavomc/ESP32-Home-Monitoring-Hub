@@ -122,6 +122,8 @@ void setup(void) {
   //Initial Sensor read
   updateIndividualSensorData();
   newSensorData = true;  // Flag initial data
+  currentDisplayState = false;  // Start off
+
 }
 
 void loop() {
@@ -133,13 +135,11 @@ void loop() {
     updateIndividualSensorData();
     newSensorData = true;
   }
-Serial.println(digitalRead(activateDisplayButton));
+  //Serial.println(digitalRead(activateDisplayButton));
 
-  // === DETECÇÃO DE TOQUE NO BOTÃO ===
+  // === BUTTON PRESS: TOGGLE DISPLAY ===
   if (checkButtonPress()) {
-    currentDisplayState = !currentDisplayState;  // Toggle!
-
-    
+    currentDisplayState = !currentDisplayState;
     if (currentDisplayState) {
       tftPrintDisplayHeader();
       tftPrintMainSensorData();
@@ -148,19 +148,14 @@ Serial.println(digitalRead(activateDisplayButton));
     else {
       tftBlankDisplay();
     }
-    newSensorData = false;
-    
   }
 
-  // === ATUALIZA DISPLAY SE NOVOS DADOS E ESTIVER LIGADO ===
+  // === UPDATE DISPLAY ONLY ON NEW DATA ===
   if (currentDisplayState && newSensorData) {
     tftPrintDisplayHeader();
     tftPrintMainSensorData();
     serialPrintSensorData();
     newSensorData = false;
-  }
-  if(currentDisplayState==false){
-    tftBlankDisplay();
   }
 }
 
@@ -198,7 +193,7 @@ bool checkButtonPress() {
       lastStableState = currentReading;
 
       // Detecta borda de subida (LOW -> HIGH)
-      if (lastStableState == HIGH) {
+      if (lastStableState == HIGH && currentReading == LOW) {
         return true;
       }
     }
