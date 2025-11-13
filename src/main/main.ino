@@ -38,6 +38,14 @@ Adafruit_BMP280 bmp;
 
 // ================= Global ====================
 
+struct MainData {
+  float temperature;
+  float humidity;
+  float light;
+  float pressure;
+  float altitude;
+};
+
 // Define struct globally for DHT11 data
 struct DHT11Data {
   float temperature;
@@ -58,9 +66,7 @@ struct BMP280Data{
 
 // Buttons
 #define activateDisplayButton 34
-bool lastButtonState = false;
-unsigned long lastDebounceTime = 0;
-const unsigned long debounceDelay = 50;  // 50ms debounce period
+bool buttonPressed = false;
 
 // Define millis delay globally
 unsigned long sensorReadDelay = 5000;
@@ -68,6 +74,8 @@ unsigned long previousMillis = 0;
 bool newSensorData = false;  // Tracks if new sensor data is available
 bool currentDisplayState = false;  // Tracks if display is currently active
 
+
+MainData lastMainData = {NAN, NAN, NAN, NAN, NAN};
 DHT11Data lastDHT11Data = {NAN, NAN};
 BH1750Data lastBH1750Data = {NAN};
 BMP280Data lastBMP280Data = {NAN, NAN, NAN};
@@ -79,7 +87,8 @@ void setup(void) {
   Serial.print(F("Starting system..."));
 
   //Button 
-  pinMode(activateDisplayButton, INPUT);
+  pinMode(activateDisplayButton, INPUT);// GPIO34 = input-only
+  
 
   // TFT
   tft.init(240, 280);
@@ -111,8 +120,9 @@ void setup(void) {
                   Adafruit_BMP280::STANDBY_MS_500);
   
   //Initial Sensor read
-  updateSensorData();
+  updateIndividualSensorData();
   newSensorData = true;  // Flag initial data
+
 }
 
 void loop() {
@@ -121,65 +131,75 @@ void loop() {
   unsigned long currentMillis = millis();
   if(currentMillis-previousMillis >= max(sensorReadDelay, delayDHT)){
     previousMillis = currentMillis;
-    updateSensorData();
+    updateIndividualSensorData();
     newSensorData = true;
   }
+  //Serial.println(digitalRead(activateDisplayButton));
 
-  bool buttonState = readActivateDisplayButton();
-
-  /*
-  // Update display only on button state change or new sensor data
-  if (buttonState != currentDisplayState || (buttonState && newSensorData)) {
-    currentDisplayState = buttonState;
-    if (buttonState) {
-      // Only clear screen and draw header on button state change
-      if (buttonState != lastButtonState || !currentDisplayState) {
-        tftPrintDisplayHeader();
-      }
-      serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-
-      tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    }
+  // === BUTTON PRESS: TOGGLE DISPLAY ===
+  if (checkButtonPress()) {
+    currentDisplayState = !currentDisplayState;
+    if (currentDisplayState) {
+      tftPrintDisplayHeader();
+      tftPrintMainSensorData();
+      serialPrintSensorData();
+    } 
     else {
       tftBlankDisplay();
     }
-    newSensorData = false;  // Reset flag after updating display
   }
-  */
 
-  if(newSensorData){
+  // === UPDATE DISPLAY ONLY ON NEW DATA ===
+  if (currentDisplayState && newSensorData) {
     tftPrintDisplayHeader();
-    serialPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                            lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    tftPrintSensorData(lastDHT11Data.temperature, lastDHT11Data.humidity, lastBH1750Data.light,
-                         lastBMP280Data.temperature, lastBMP280Data.pressure, lastBMP280Data.altitude);
-    newSensorData = false;  // Reset flag after updating display
-
+    tftPrintMainSensorData();
+    serialPrintSensorData();
+    newSensorData = false;
   }
-
-
-  
 }
 
-void updateSensorData(){
+void updateIndividualSensorData(){
   lastDHT11Data = readDHT11Data();
   lastBH1750Data = readBH1750Data();
   lastBMP280Data = readBMP280Data();
+  updateMainData();
 }
 
-bool readActivateDisplayButton(){
-  bool reading = digitalRead(activateDisplayButton)==HIGH;
+void updateMainData(){
+  lastMainData.temperature = (lastDHT11Data.temperature+lastBMP280Data.temperature) / 2;
+  lastMainData.humidity = lastDHT11Data.humidity;
+  lastMainData.light = lastBH1750Data.light;
+  lastMainData.pressure = lastBMP280Data.pressure;
+  lastMainData.altitude = lastBMP280Data.altitude;
+}
 
-  if (lastButtonState != reading){
+bool checkButtonPress() {
+  static bool lastStableState = LOW;       // Estado estável anterior
+  static bool lastReading = LOW;           // Última leitura bruta
+  static unsigned long lastDebounceTime = 0;
+  const unsigned long debounceDelay = 150; // Aumenta o debounce
+
+  bool currentReading = digitalRead(activateDisplayButton);
+
+  // Se o estado mudou desde a última leitura, reseta o timer
+  if (currentReading != lastReading) {
     lastDebounceTime = millis();
   }
-  if(millis()-lastDebounceTime>debounceDelay){
-    lastButtonState = reading;
+
+  // Se passou tempo suficiente e o estado é diferente do estável
+  if ((millis() - lastDebounceTime) > debounceDelay) {
+    if (currentReading != lastStableState) {
+      lastStableState = currentReading;
+
+      // Detecta borda de subida (LOW -> HIGH)
+      if (lastStableState == HIGH) {
+        return true;
+      }
+    }
   }
-  return lastButtonState;
-  
+
+  lastReading = currentReading;
+  return false;
 }
 
 DHT11Data readDHT11Data(){
@@ -239,67 +259,107 @@ void tftPrintDisplayHeader(){
 }
 
 void tftBlankDisplay(){
-  tft.setTextWrap(false);
   tft.fillScreen(ST77XX_BLACK);
-  tft.setCursor(0, 0);
-  tft.setTextColor(ST77XX_BLACK);
-  tft.setTextSize(0);
-  tft.println(" ");
 }
 
-void serialPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude){
+void serialPrintSensorData(){
   Serial.print("Temperature: ");
-  Serial.print(temperature);
+  Serial.print(lastMainData.temperature);
   Serial.println(" *C");
 
   Serial.print("Humidity: ");
-  Serial.print(humidity);
+  Serial.print(lastMainData.humidity);
   Serial.println("%");
 
   Serial.print("Light: ");
-  Serial.print(light);
+  Serial.print(lastMainData.light);
   Serial.println("lx");
 
-  Serial.print("BMP280 Temp: ");
-  Serial.print(bmpTemp);
-  Serial.println(" *C");
-
   Serial.print("Pressure: ");
-  Serial.print(pressure);
+  Serial.print(lastMainData.pressure);
   Serial.println(" Pa");
 
   Serial.print("Altitude: ");
-  Serial.print(altitude);
+  Serial.print(lastMainData.altitude);
   Serial.println(" m");
 }
 
-void tftPrintSensorData(float temperature, float humidity, float light, float bmpTemp, float pressure, float altitude) {
-   tft.setTextWrap(false);
+void tftPrintMainSensorData() {
+  tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
   tft.print("Temp.: ");
-  tft.print(temperature);  
+  tft.print(lastMainData.temperature);  
   tft.println(" *C");
   
   tft.print("Humid.: ");
-  tft.print(humidity);
+  tft.print(lastMainData.humidity);
   tft.println(" %");
 
   tft.print("Light: ");
-  tft.print(light);
+  tft.print(lastMainData.light);
   tft.println(" lx");
 
-  tft.print("BMP280: ");
-  tft.print(bmpTemp);
-  tft.println(" *C");
-
   tft.print("Press.: ");
-  tft.print(pressure/100.0F);
+  tft.print(lastMainData.pressure/100.0F);
   tft.println(" hPa");
 
   tft.print("Alt.: ");
-  tft.print(altitude);
+  tft.print(lastMainData.altitude);
+  tft.println(" m");
+}
+
+void tftPrintDHT11Data(){
+  tft.setTextWrap(false);
+  tft.setCursor(0, 35);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+
+  tft.print("DHT11 Sensor");
+
+  tft.print("Temp.: ");
+  tft.print(lastDHT11Data.temperature);  
+  tft.println(" *C");
+  
+  tft.print("Humid.: ");
+  tft.print(lastDHT11Data.humidity);
+  tft.println(" %");
+}
+
+void tftPrintBH1750Data(){
+  tft.setTextWrap(false);
+  tft.setCursor(0, 35);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+
+  tft.print("BH1750 Sensor");
+
+  tft.print("Light.: ");
+  tft.print(lastBH1750Data.light);  
+  tft.println(" lx");
+}
+
+
+
+void tftPrintBMP280Data(){
+  tft.setTextWrap(false);
+  tft.setCursor(0, 35);
+  tft.setTextColor(ST77XX_WHITE);
+  tft.setTextSize(2);
+
+  tft.print("BMP280 Sensor");
+
+  tft.print("Temp.: ");
+  tft.print(lastBMP280Data.temperature);  
+  tft.println(" *C");
+
+  tft.print("Press.: ");
+  tft.print(lastBMP280Data.pressure/100.0F);
+  tft.println(" hPa");
+
+  tft.print("Alt.: ");
+  tft.print(lastBMP280Data.altitude);
   tft.println(" m");
 }
