@@ -132,16 +132,16 @@ void setup(void) {
 }
 
 void loop() {
-
-  //Initiate millis delay
   unsigned long currentMillis = millis();
+
+  // ---- read sensors on a fixed interval ----
   if(currentMillis-previousMillis >= max(sensorReadDelay, delayDHT)){
     previousMillis = currentMillis;
     updateIndividualSensorData();
     newSensorData = true;
   }
 
-  // === BUTTON PRESS: TOGGLE DISPLAY ===
+  // ---- BUTTON 1: activate / deactivate display ----
   if (checkButtonPress()) {
     currentDisplayState = !currentDisplayState;
     if (currentDisplayState) {
@@ -154,10 +154,9 @@ void loop() {
     }
   }
 
-  // === UPDATE DISPLAY ONLY ON NEW DATA ===
+  // ---- refresh display only when new sensor data arrives ----
   if (currentDisplayState && newSensorData) {
-    tftPrintDisplayHeader();
-    tftPrintMainSensorData();
+    tftPrintCurrentPage();
     serialPrintSensorData();
     newSensorData = false;
   }
