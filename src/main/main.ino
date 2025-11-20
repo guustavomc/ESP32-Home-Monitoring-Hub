@@ -145,8 +145,8 @@ void loop() {
   if (checkButtonPress()) {
     currentDisplayState = !currentDisplayState;
     if (currentDisplayState) {
-      tftPrintDisplayHeader();
-      tftPrintMainSensorData();
+      displayMode = 0;
+      tftPrintCurrentPage();
       serialPrintSensorData();
     } 
     else {
@@ -387,8 +387,6 @@ void tftPrintBH1750Data(){
   tft.print(lastBH1750Data.light);  
   tft.println(" lx");
 }
-
-
 
 void tftPrintBMP280Data(){
   tft.setTextWrap(false);
