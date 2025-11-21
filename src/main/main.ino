@@ -154,6 +154,12 @@ void loop() {
     }
   }
 
+  // ---- BUTTON 2: change information page ----
+  if (currentDisplayState && checkChangeButtonPress()) {
+    displayMode = (displayMode + 1) % MAX_MODES;
+    tftPrintCurrentPage();
+  }
+
   // ---- refresh display only when new sensor data arrives ----
   if (currentDisplayState && newSensorData) {
     tftPrintCurrentPage();
