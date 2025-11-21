@@ -369,7 +369,7 @@ void tftPrintDHT11Data(){
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
-  tft.print("DHT11 Sensor");
+  tft.println("DHT11 Sensor");
 
   tft.print("Temp.: ");
   tft.print(lastDHT11Data.temperature);  
@@ -386,7 +386,7 @@ void tftPrintBH1750Data(){
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
-  tft.print("BH1750 Sensor");
+  tft.println("BH1750 Sensor");
 
   tft.print("Light.: ");
   tft.print(lastBH1750Data.light);  
@@ -399,7 +399,7 @@ void tftPrintBMP280Data(){
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
-  tft.print("BMP280 Sensor");
+  tft.println("BMP280 Sensor");
 
   tft.print("Temp.: ");
   tft.print(lastBMP280Data.temperature);  
