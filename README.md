@@ -65,7 +65,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 ## Wiring
 Below is a general wiring guide for connecting the sensors and display to the ESP32. Adjust pin assignments based on your specific code configuration.
 
-<img src="tests\display-ST7789-BH1750-DHT11-BMP280-integration\breadboard-circuit.jpg" alt="Breadboard Circuit">
+<img src="component-integration-tests\4-Sensor-Station-Interface-Control\breadboard-circuit.jpg" alt="Breadboard Circuit">
 
 | Component       | ESP32 Pin | Notes                              |
 |-----------------|-----------|------------------------------------|
