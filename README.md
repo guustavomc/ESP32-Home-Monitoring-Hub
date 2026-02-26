@@ -29,6 +29,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 - **BH1750 Sensor** (for light intensity)
 - **ST7789 TFT Display** (1.8" SPI TFT display)
 - Jumper wires
+- Push Button
 - Breadboard or custom PCB
 - USB cable for programming and power
 
@@ -65,7 +66,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 ## Wiring
 Below is a general wiring guide for connecting the sensors and display to the ESP32. Adjust pin assignments based on your specific code configuration.
 
-<img src="tests\display-ST7789-BH1750-DHT11-BMP280-integration\breadboard-circuit.jpg" alt="Breadboard Circuit">
+<img src="component-integration-tests\4-Sensor-Station-Interface-Control\breadboard-circuit.jpg" alt="Breadboard Circuit">
 
 | Component       | ESP32 Pin | Notes                              |
 |-----------------|-----------|------------------------------------|
@@ -78,7 +79,10 @@ Below is a general wiring guide for connecting the sensors and display to the ES
 | ST7789 (DC)     | GPIO 2    | Data/Command                       |
 | ST7789 (RST)    | GPIO 15   | Reset                              |
 | ST7789 (SCL)    | GPIO 18   | SPI Clock                          |
-| ST7789 (SDA)    | GPIO 23   | SPI MOSI                           |
+| ST7789 (SDA)    | GPIO 23   | SPI MOSI                           
+| On/Off Button    | GPIO 34   | Activate or deactivate display                         |
+| Change Info Button    | GPIO 33   | Change sensor data on display                         |
+
 
 **Notes**:
 - Ensure a common ground (GND) for all components.
@@ -91,7 +95,8 @@ Below is a general wiring guide for connecting the sensors and display to the ES
    - **Temperature** and **Humidity** from the DHT sensor.
    - **Atmospheric Pressure** (and optional temperature) from the BMP280.
    - **Light Intensity** (in lux) from the BH1750.
-3. Customize the display output or data logging by modifying the Arduino sketch as needed.
+3. Button connected to GPIO 34 will switch On and Off the display.
+4. Button connected to GPIO 33 will alter from data summary to specific sensor data.
 
 ## Libraries Used
 The project relies on the following open-source libraries:
@@ -111,7 +116,6 @@ The project used as a base multiple example projects from the community, example
 
 ## Next Steps
 The following features are planned to enhance the ESP32 Home Monitoring Hub:
-- **Display Improvement**: adding button to turn on display, option to navigate on specific display details.
 - **Sharing Sensor Data to a Separate Server**: Enable Wi-Fi connectivity to send sensor data to a remote server or cloud platform for real-time monitoring and data visualization. Using https://github.com/plapointe6/EspMQTTClient
 
 ## Contributing
