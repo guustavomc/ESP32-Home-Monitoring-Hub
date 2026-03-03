@@ -268,6 +268,7 @@ DHT11Data readDHT11Data(){
     Serial.println("Error reading DHT11 temperature and humidity data");
     data.temperature = NAN;
     data.humidity = NAN;
+    return data; 
   } 
 
   data.temperature = temperatureData;
@@ -282,6 +283,8 @@ BH1750Data readBH1750Data(){
   if (lightData < 0) {
     Serial.println("Error reading BH1750 light data");
     data.light = NAN;
+    return data;
+
   } 
   data.light = lightData;
 
