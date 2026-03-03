@@ -71,8 +71,6 @@ const uint8_t MAX_MODES = 4;
 #define activateDisplayButton 34
 #define changeDisplayInformation 33
 
-bool buttonPressed = false;
-
 // Define millis delay globally
 unsigned long sensorReadDelay = 5000;
 unsigned long previousMillis = 0;
