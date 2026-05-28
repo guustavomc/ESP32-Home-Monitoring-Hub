@@ -11,6 +11,10 @@
 
 #include <Adafruit_BMP280.h>
 
+#include "config.h"
+#include <EspMQTTClient.h>
+#include <time.h>
+
 // ================= TFT Pins ==================
 
 #define TFT_CS         14
@@ -35,6 +39,13 @@ uint32_t delayDHT;
 Adafruit_BMP280 bmp;
 //SCK (SCL Pin)	  - GPIO 22
 //SDI (SDA pin)	  - GPIO 21
+
+EspMQTTClient mqttClient(
+  WIFI_SSID,
+  WIFI_PASSWORD,
+  MQTT_BROKER,
+  "ESP32SensorHub"
+);
 
 // ================= Global ====================
 
@@ -83,6 +94,33 @@ DHT11Data lastDHT11Data = {NAN, NAN};
 BH1750Data lastBH1750Data = {NAN};
 BMP280Data lastBMP280Data = {NAN, NAN, NAN};
 
+void onConnectionEstablished() {
+  Serial.println("MQTT broker connected");
+}
+
+String getTimestamp() {
+  struct tm timeinfo;
+  if (!getLocalTime(&timeinfo)) return "1970-01-01T00:00:00Z";
+  char buf[25];
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
+  return String(buf);
+}
+
+void publishSensorData() {
+  if (!mqttClient.isConnected()) return;
+
+  String payload = "{";
+  payload += "\"timestamp\":\"" + getTimestamp() + "\",";
+  payload += "\"temperature\":" + String(lastMainData.temperature, 1) + ",";
+  payload += "\"humidity\":" + String(lastMainData.humidity, 1) + ",";
+  payload += "\"light\":" + String(lastMainData.light, 1) + ",";
+  payload += "\"pressure\":" + String(lastMainData.pressure / 100.0F, 2) + ",";
+  payload += "\"altitude\":" + String(lastMainData.altitude, 1);
+  payload += "}";
+
+  mqttClient.publish(MQTT_TOPIC, payload);
+  Serial.println("MQTT published: " + payload);
+}
 
 void setup(void) {
 
@@ -108,6 +146,9 @@ void setup(void) {
 
   // I2C devices
   Wire.begin();
+
+  configTime(NTP_UTC_OFFSET_SEC, 0, "pool.ntp.org");
+  Serial.println("Waiting for NTP sync...");
 
   // BH1750
   lightMeter.begin();
