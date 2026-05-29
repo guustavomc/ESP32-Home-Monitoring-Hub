@@ -50,6 +50,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
      - `Adafruit_BMP280_Library`
      - `BH1750`
      - `Adafruit_ST7735_Library`
+     - `EspMQTTClient`
    - Alternatively, download them from the links in the [Libraries Used](#libraries-used) section and add them manually.
 
 3. **Clone the repository**:
@@ -105,6 +106,7 @@ The project relies on the following open-source libraries:
 - [Adafruit_BMP280_Library](https://github.com/adafruit/Adafruit_BMP280_Library) - For BMP280 pressure sensor
 - [BH1750](https://github.com/claws/BH1750) - For BH1750 light sensor
 - [Adafruit_ST7735_Library](https://github.com/adafruit/Adafruit-ST7735-Library) - For ST7735 TFT display
+- [EspMQTTClient](https://github.com/plapointe6/EspMQTTClient) - For MQTT Client
 
 ## Code Examples
 The project used as a base multiple example projects from the community, examples used for each component:
@@ -113,6 +115,7 @@ The project used as a base multiple example projects from the community, example
 - [Sensor BMP280](https://circuitdigest.com/microcontroller-projects/interfacing-bmp280-sensor-with-arduino) - For BMP280 sensor
 - [Sensor DHT11](https://blog.eletrogate.com/sensores-dht11-dht22/) - For DHT11 sensor
 - [Sensor PIR Motion](https://randomnerdtutorials.com/arduino-with-pir-motion-sensor/) - For PIR Motion Sensor
+- [MQTT Client](https://github.com/plapointe6/EspMQTTClient/blob/master/examples/SimpleMQTTClient/SimpleMQTTClient.ino) - For MQTT
 
 ## Next Steps
 The following features are planned to enhance the ESP32 Home Monitoring Hub:
