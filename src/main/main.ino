@@ -171,12 +171,15 @@ void setup(void) {
 }
 
 void loop() {
+  mqttClient.loop();
+
   unsigned long currentMillis = millis();
 
   // ---- read sensors on a fixed interval ----
   if(currentMillis-previousMillis >= max(sensorReadDelay, delayDHT)){
     previousMillis = currentMillis;
     updateIndividualSensorData();
+    publishSensorData(); 
     newSensorData = true;
   }
 
@@ -350,6 +353,10 @@ void tftPrintDisplayHeader(){
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
   tft.println("Sensor Data");
+
+  // Green = MQTT connected, Red = disconnected
+  uint16_t dotColor = mqttClient.isConnected() ? ST77XX_GREEN : ST77XX_RED;
+  tft.fillCircle(230, 8, 5, dotColor);
 }
 
 void tftBlankDisplay(){
