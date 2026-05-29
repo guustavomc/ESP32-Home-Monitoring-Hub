@@ -12,6 +12,7 @@
 #include <Adafruit_BMP280.h>
 
 #include "config.h"
+#include <WiFi.h>
 #include <EspMQTTClient.h>
 #include <time.h>
 
@@ -356,7 +357,7 @@ void tftPrintDisplayHeader(){
 
   // Green = MQTT connected, Red = disconnected
   uint16_t dotColor = mqttClient.isConnected() ? ST77XX_GREEN : ST77XX_RED;
-  tft.fillCircle(230, 8, 5, dotColor);
+  tft.fillCircle(220, 8, 5, dotColor);
 }
 
 void tftBlankDisplay(){
