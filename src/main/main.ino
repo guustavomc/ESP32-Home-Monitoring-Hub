@@ -357,7 +357,7 @@ void tftPrintDisplayHeader(){
 
   // Green = MQTT connected, Red = disconnected
   uint16_t dotColor = mqttClient.isConnected() ? ST77XX_GREEN : ST77XX_RED;
-  tft.fillCircle(220, 8, 5, dotColor);
+  tft.fillCircle(60, 8, 5, dotColor);
 }
 
 void tftBlankDisplay(){
