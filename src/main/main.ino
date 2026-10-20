@@ -88,7 +88,7 @@ unsigned long sensorReadDelay = 5000;
 unsigned long previousMillis = 0;
 bool newSensorData = false;  // Tracks if new sensor data is available
 bool currentDisplayState = false;  // Tracks if display is currently active
-
+bool bmpAvailable = false;
 
 MainData lastMainData = {NAN, NAN, NAN, NAN, NAN};
 DHT11Data lastDHT11Data = {NAN, NAN};
@@ -100,23 +100,43 @@ void onConnectionEstablished() {
 }
 
 String getTimestamp() {
+  time_t now;
+  time(&now);
+  if (now < 1700000000) return "";        // NTP not synced yet
+
+  now += NTP_UTC_OFFSET_SEC;              // shift to local time
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) return "1970-01-01T00:00:00Z";
+  gmtime_r(&now, &timeinfo);
   char buf[25];
-  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", &timeinfo);
-  return String(buf);
+  strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", &timeinfo);
+
+  int offsetMin = NTP_UTC_OFFSET_SEC / 60;
+  char tz[8];
+  snprintf(tz, sizeof(tz), "%c%02d:%02d",
+           offsetMin < 0 ? '-' : '+', abs(offsetMin) / 60, abs(offsetMin) % 60);
+  return String(buf) + tz;                // e.g. 2026-10-19T14:30:00-03:00
+}
+
+String jsonNumber(float value, int decimals) {
+  return isnan(value) ? "null" : String(value, decimals);
 }
 
 void publishSensorData() {
   if (!mqttClient.isConnected()) return;
 
-  String payload = "{";
-  payload += "\"timestamp\":\"" + getTimestamp() + "\",";
-  payload += "\"temperature\":" + String(lastMainData.temperature, 1) + ",";
-  payload += "\"humidity\":" + String(lastMainData.humidity, 1) + ",";
-  payload += "\"light\":" + String(lastMainData.light, 1) + ",";
-  payload += "\"pressure\":" + String(lastMainData.pressure / 100.0F, 2) + ",";
-  payload += "\"altitude\":" + String(lastMainData.altitude, 1);
+  String timestamp = getTimestamp();
+  if (timestamp == "") {
+    Serial.println("Skipping publish: waiting for NTP sync");
+    return;
+  }
+
+    String payload = "{";
+  payload += "\"timestamp\":\"" + timestamp + "\",";
+  payload += "\"temperature\":" + jsonNumber(lastMainData.temperature, 1) + ",";
+  payload += "\"humidity\":"    + jsonNumber(lastMainData.humidity, 1) + ",";
+  payload += "\"light\":"       + jsonNumber(lastMainData.light, 1) + ",";
+  payload += "\"pressure\":"    + jsonNumber(lastMainData.pressure / 100.0F, 2) + ",";
+  payload += "\"altitude\":"    + jsonNumber(lastMainData.altitude, 1);
   payload += "}";
 
   mqttClient.publish(MQTT_TOPIC, payload);
@@ -155,15 +175,17 @@ void setup(void) {
   lightMeter.begin();
 
   // BMP280
-  if (!bmp.begin(BMP280_ADDRESS)) {
-    Serial.println(F("Could not find a valid BMP280 sensor!"));
-    while (1) delay(10);
+  bmpAvailable = bmp.begin(BMP280_ADDRESS);
+  if (!bmpAvailable) {
+    Serial.println(F("Could not find a valid BMP280 sensor! Continuing without it."));
+  } 
+  else {
+    bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
+                    Adafruit_BMP280::SAMPLING_X2,
+                    Adafruit_BMP280::SAMPLING_X16,
+                    Adafruit_BMP280::FILTER_X16,
+                    Adafruit_BMP280::STANDBY_MS_500);
   }
-  bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
-                  Adafruit_BMP280::SAMPLING_X2,
-                  Adafruit_BMP280::SAMPLING_X16,
-                  Adafruit_BMP280::FILTER_X16,
-                  Adafruit_BMP280::STANDBY_MS_500);
   
   //Initial Sensor read
   updateIndividualSensorData();
@@ -219,7 +241,19 @@ void updateIndividualSensorData(){
 }
 
 void updateMainData(){
-  lastMainData.temperature = (lastDHT11Data.temperature+lastBMP280Data.temperature) / 2;
+  float dhtTemp = lastDHT11Data.temperature;
+  float bmpTemp = lastBMP280Data.temperature;
+
+  if (!isnan(dhtTemp) && !isnan(bmpTemp)) {
+    lastMainData.temperature = (dhtTemp + bmpTemp) / 2;
+  } 
+  else if (!isnan(bmpTemp)) {
+    lastMainData.temperature = bmpTemp;
+  } 
+  else {
+    lastMainData.temperature = dhtTemp;   // may still be NAN if both failed
+  }
+
   lastMainData.humidity = lastDHT11Data.humidity;
   lastMainData.light = lastBH1750Data.light;
   lastMainData.pressure = lastBMP280Data.pressure;
@@ -335,17 +369,19 @@ BH1750Data readBH1750Data(){
 }
 
 BMP280Data readBMP280Data(){
-  float temperature = bmp.readTemperature();
-  float pressure = bmp.readPressure(); 
-  float altitude = bmp.readAltitude(1013.25);
   BMP280Data data;
+  if (!bmpAvailable) {
+    data.temperature = NAN;
+    data.pressure = NAN;
+    data.altitude = NAN;
+    return data;
+  }
 
-  data.temperature = temperature;
-  data.pressure = pressure;
-  data.altitude = altitude;
-
+  data.temperature = bmp.readTemperature();
+  data.pressure = bmp.readPressure();
+  data.altitude = bmp.readAltitude(1013.25);
   return data;
-}
+  }
 
 void tftPrintDisplayHeader(){
   tft.setTextWrap(false);
