@@ -149,8 +149,8 @@ void setup(void) {
   Serial.print(F("Starting system..."));
 
   //Button 
-  pinMode(activateDisplayButton, INPUT);// GPIO34 = input-only
-  pinMode(changeDisplayInformation, INPUT);// GPIO33 = input-only
+  pinMode(activateDisplayButton, INPUT);// GPIO34 = input-only, no internal pull resistors: needs external 10k pull-down
+  pinMode(changeDisplayInformation, INPUT);// GPIO33 supports internal pull-down
 
 
   // TFT
@@ -264,7 +264,7 @@ bool checkButtonPress() {
   static bool lastStableState = LOW;       // Last stable state
   static bool lastReading = LOW;           // Last raw reading
   static unsigned long lastDebounceTime = 0;
-  const unsigned long debounceDelay = 150; // Increase debounce delay
+  const unsigned long debounceDelay = 50;  // Short enough to catch quick taps
 
   bool currentReading = digitalRead(activateDisplayButton);
 
@@ -293,7 +293,7 @@ bool checkChangeButtonPress() {
   static bool lastStableState = LOW;
   static bool lastReading     = LOW;
   static unsigned long lastDebounceTime = 0;
-  const unsigned long debounceDelay = 150;
+  const unsigned long debounceDelay = 50;
 
   bool currentReading = digitalRead(changeDisplayInformation);
 
