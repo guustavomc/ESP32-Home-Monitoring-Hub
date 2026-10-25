@@ -32,6 +32,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 - **ST7789 TFT Display** (240x280 SPI TFT display)
 - Jumper wires
 - 2 Push Buttons
+- 2 × 10kΩ resistors (pull-downs for the buttons)
 - Breadboard or custom PCB
 - USB cable for programming and power
 - **MQTT broker** on your network (e.g., Mosquitto on a Raspberry Pi) to receive the data
@@ -100,14 +101,15 @@ Below is a general wiring guide for connecting the sensors and display to the ES
 | ST7789 (RST)    | GPIO 15   | Reset                              |
 | ST7789 (SCL)    | GPIO 18   | SPI Clock                          |
 | ST7789 (SDA)    | GPIO 23   | SPI MOSI                           |
-| On/Off Button   | GPIO 34   | Activate or deactivate display     |
-| Change Info Button | GPIO 33 | Change sensor data on display     |
+| On/Off Button   | GPIO 34   | Activate or deactivate display; 10kΩ pull-down to GND |
+| Change Info Button | GPIO 33 | Change sensor data on display; 10kΩ pull-down to GND |
 
 
 **Notes**:
 - Ensure a common ground (GND) for all components.
 - Power the sensors and display with 3.3V or 5V as per their specifications.
 - Verify pin assignments in the code before wiring.
+- Wire each button between 3.3V and its GPIO, with a 10kΩ resistor from that GPIO to GND. Without it the pin floats when the button is released and presses are missed (GPIO 34 has no internal pull resistors, so the external one is required).
 
 ## Usage
 1. Power the ESP32 via USB or an external power source.
