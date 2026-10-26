@@ -147,7 +147,11 @@ The project used as a base multiple example projects from the community, example
 ## Next Steps
 The following features are planned to enhance the ESP32 Home Monitoring Hub:
 - ~~**Sharing Sensor Data to a Separate Server**~~: Done. Readings are published over MQTT using [EspMQTTClient](https://github.com/plapointe6/EspMQTTClient).
-- **Raspberry Pi server**: Mosquitto broker, InfluxDB storage and a Grafana dashboard for the published readings.
+- ~~**Server side**~~: Done in [Home-Monitoring-Hub-Backend](https://github.com/guustavomc/Home-Monitoring-Hub-Backend): Mosquitto, a Spring Boot service that saves readings to PostgreSQL, and a REST API. Grafana and the move to a Raspberry Pi are tracked in its roadmap.
+- **DHT11 reliability**: humidity readings fail intermittently, which suggests a loose wire. Check the wiring, or move the data pin from GPIO 2 (a boot strapping pin) to GPIO 4.
+- **Online/offline status**: publish an MQTT last will message, so the broker announces when the hub drops off and the backend/Grafana can show it.
+- **Watchdog / auto-recovery**: reboot automatically if the firmware hangs.
+- **Point to the Raspberry Pi**: change `MQTT_BROKER` to the Pi's IP once the backend stack moves there.
 - **PIR motion sensor**: wake the display and log room occupancy.
 - **Alerts**: notifications when readings cross thresholds (e.g., high humidity).
 - **OTA updates**: flash new firmware over Wi-Fi.
