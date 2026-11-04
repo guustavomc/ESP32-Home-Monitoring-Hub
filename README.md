@@ -20,6 +20,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 - Visual display of sensor data on an ST7789 TFT screen.
 - Publishes sensor readings as JSON over MQTT (Wi-Fi), with NTP timestamps.
 - Keeps running when a sensor fails: missing readings are sent as `null`.
+- Reports its online/offline status over MQTT, and recovers on its own: a watchdog reboots it if the firmware hangs or MQTT stays disconnected.
 - Easy-to-use interface for home monitoring applications.
 - Modular design supporting multiple sensors.
 - Low-power operation suitable for continuous monitoring.
@@ -125,6 +126,14 @@ Below is a general wiring guide for connecting the sensors and display to the ES
    {"timestamp":"2026-10-19T14:30:00-03:00","temperature":23.4,"humidity":55.0,"light":312.5,"pressure":1013.25,"altitude":12.3}
    ```
    Temperature is the average of the DHT11 and BMP280 (or whichever one is working), pressure is in hPa, and a failed sensor reading is sent as `null`.
+7. The hub's status is published to `home/hub/status` as a retained message: `online` when it connects, and `offline` from the broker (MQTT last will) about 20–25 s after the hub disappears. To watch it:
+   ```bash
+   docker compose exec mosquitto mosquitto_sub -t home/hub/status -v
+   ```
+8. **Auto-recovery:**
+   - A hardware watchdog reboots the ESP32 if `loop()` stops running for 30 s.
+   - If MQTT stays disconnected for 5 minutes, the hub restarts itself.
+   - At boot, the Serial Monitor prints the reason for the last restart (e.g. `Reset reason: brownout (power dip)`), which helps diagnose dropouts. A brownout usually points to a weak USB cable or power supply.
 
 ## Libraries Used
 The project relies on the following open-source libraries:
@@ -149,8 +158,8 @@ The following features are planned to enhance the ESP32 Home Monitoring Hub:
 - ~~**Sharing Sensor Data to a Separate Server**~~: Done. Readings are published over MQTT using [EspMQTTClient](https://github.com/plapointe6/EspMQTTClient).
 - ~~**Server side**~~: Done in [Home-Monitoring-Hub-Backend](https://github.com/guustavomc/Home-Monitoring-Hub-Backend): Mosquitto, a Spring Boot service that saves readings to PostgreSQL, and a REST API. Grafana and the move to a Raspberry Pi are tracked in its roadmap.
 - **DHT11 reliability**: humidity readings fail intermittently, which suggests a loose wire. Check the wiring, or move the data pin from GPIO 2 (a boot strapping pin) to GPIO 4.
-- **Online/offline status**: publish an MQTT last will message, so the broker announces when the hub drops off and the backend/Grafana can show it.
-- **Watchdog / auto-recovery**: reboot automatically if the firmware hangs.
+- ~~**Online/offline status**~~: Done. Retained `online` / `offline` (MQTT last will) on `home/hub/status`. Storing it in the backend and showing it in Grafana is tracked in the backend roadmap.
+- ~~**Watchdog / auto-recovery**~~: Done. A hardware watchdog (30 s), a reboot after 5 minutes without MQTT, and the reset reason printed at boot.
 - **Point to the Raspberry Pi**: change `MQTT_BROKER` to the Pi's IP once the backend stack moves there.
 - **PIR motion sensor**: wake the display and log room occupancy.
 - **Alerts**: notifications when readings cross thresholds (e.g., high humidity).

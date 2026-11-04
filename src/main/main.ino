@@ -16,6 +16,8 @@
 #include <EspMQTTClient.h>
 #include <time.h>
 
+#include <esp_task_wdt.h>
+
 // ================= TFT Pins ==================
 
 #define TFT_CS         14
@@ -83,12 +85,18 @@ const uint8_t MAX_MODES = 4;
 #define activateDisplayButton 34
 #define changeDisplayInformation 33
 
+#define WDT_TIMEOUT_MS 30000   // reboot if loop() doesn't run for 30 s
+const unsigned long MAX_DISCONNECTED_MS = 5UL * 60 * 1000;   // 5 minutes
+unsigned long lastConnectedMillis = 0;
+
 // Define millis delay globally
 unsigned long sensorReadDelay = 5000;
 unsigned long previousMillis = 0;
 bool newSensorData = false;  // Tracks if new sensor data is available
 bool currentDisplayState = false;  // Tracks if display is currently active
 bool bmpAvailable = false;
+
+#define MQTT_STATUS_TOPIC "home/hub/status"
 
 MainData lastMainData = {NAN, NAN, NAN, NAN, NAN};
 DHT11Data lastDHT11Data = {NAN, NAN};
@@ -97,6 +105,7 @@ BMP280Data lastBMP280Data = {NAN, NAN, NAN};
 
 void onConnectionEstablished() {
   Serial.println("MQTT broker connected");
+  mqttClient.publish(MQTT_STATUS_TOPIC, "online", true);   // retained
 }
 
 String getTimestamp() {
@@ -143,9 +152,27 @@ void publishSensorData() {
   Serial.println("MQTT published: " + payload);
 }
 
+const char* resetReasonName(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_POWERON:  return "power on";
+    case ESP_RST_SW:       return "software restart";
+    case ESP_RST_PANIC:    return "crash (panic)";
+    case ESP_RST_INT_WDT:  return "interrupt watchdog";
+    case ESP_RST_TASK_WDT: return "task watchdog";
+    case ESP_RST_WDT:      return "other watchdog";
+    case ESP_RST_BROWNOUT: return "brownout (power dip)";
+    case ESP_RST_EXT:      return "reset button/pin";
+    default:               return "other";
+  }
+}
+
 void setup(void) {
 
   Serial.begin(9600);
+  Serial.print(F("Reset reason: "));
+  Serial.println(resetReasonName(esp_reset_reason()));
+  // Broker publishes "offline" (retained) if the hub disappears
+  mqttClient.enableLastWillMessage(MQTT_STATUS_TOPIC, "offline", true);
   Serial.print(F("Starting system..."));
 
   //Button 
@@ -191,10 +218,30 @@ void setup(void) {
   updateIndividualSensorData();
   newSensorData = true;  // Flag initial data
 
+  // Watchdog: reboot if loop() stops running
+  esp_task_wdt_config_t wdtConfig = {
+    .timeout_ms = WDT_TIMEOUT_MS,
+    .idle_core_mask = 0,
+    .trigger_panic = true,
+  };
+  if (esp_task_wdt_init(&wdtConfig) == ESP_ERR_INVALID_STATE) {
+    esp_task_wdt_reconfigure(&wdtConfig);   // already started by the Arduino core
+  }
+  esp_task_wdt_add(NULL);                   // watch the task running loop()
+
 }
 
 void loop() {
+  esp_task_wdt_reset();   // "still alive"
   mqttClient.loop();
+
+  // Reboot if MQTT has been down for too long
+  if (mqttClient.isConnected()) {
+    lastConnectedMillis = millis();
+  } else if (millis() - lastConnectedMillis > MAX_DISCONNECTED_MS) {
+    Serial.println("MQTT disconnected for 5 minutes, restarting...");
+    ESP.restart();
+  }
 
   unsigned long currentMillis = millis();
 
