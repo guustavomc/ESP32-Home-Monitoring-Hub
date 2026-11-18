@@ -46,7 +46,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 ## Installation
 1. **Set up the Arduino IDE**:
    - Install the Arduino IDE from [arduino.cc](https://www.arduino.cc/en/software).
-   - Add ESP32 board support by following the [ESP32 Arduino setup guide](https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html).
+   - Add ESP32 board support by following the [ESP32 Arduino setup guide](https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html) and [Installing the ESP32 Board in Arduino IDE 2](https://randomnerdtutorials.com/installing-esp32-arduino-ide-2-0/).
 
 2. **Install the required libraries**:
    - Open the Arduino IDE Library Manager and install the following libraries:
@@ -152,7 +152,7 @@ The project used as a base multiple example projects from the community, example
 - [Sensor BH1750](https://randomnerdtutorials.com/esp32-bh1750-ambient-light-sensor/) - For BH1750 sensors
 - [Sensor BMP280](https://circuitdigest.com/microcontroller-projects/interfacing-bmp280-sensor-with-arduino) - For BMP280 sensor
 - [Sensor DHT11](https://blog.eletrogate.com/sensores-dht11-dht22/) - For DHT11 sensor (used before the SHT41)
-- [Sensor SHT41](https://github.com/adafruit/Adafruit_SHT4X/blob/master/examples/SHT4test/SHT4test.ino) - For SHT41 sensor
+- [Sensor SHT41](https://randomnerdtutorials.com/esp32-sht41-temperature-humidity-arduino/) - For SHT41 sensor
 - [Sensor PIR Motion](https://randomnerdtutorials.com/arduino-with-pir-motion-sensor/) - For PIR Motion Sensor
 - [MQTT Client](https://github.com/plapointe6/EspMQTTClient/blob/master/examples/SimpleMQTTClient/SimpleMQTTClient.ino) - For MQTT
 
