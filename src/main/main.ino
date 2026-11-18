@@ -6,8 +6,7 @@
 #include <BH1750.h>
 
 #include <Adafruit_Sensor.h>                       
-#include <DHT.h>
-#include <DHT_U.h>
+#include <Adafruit_SHT4x.h>
 
 #include <Adafruit_BMP280.h>
 
@@ -33,10 +32,9 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 
 BH1750 lightMeter;
 
-#define DHTTYPE    DHT11                           
-#define DHTPIN 2                                   
-DHT_Unified dht(DHTPIN, DHTTYPE);    
-uint32_t delayDHT;
+// SHT41 (I2C, address 0x44) shares the I2C bus with the BH1750 and BMP280
+Adafruit_SHT4x sht4;
+bool shtAvailable = false;
 
 #define BMP280_ADDRESS 0x76
 Adafruit_BMP280 bmp;
@@ -60,8 +58,8 @@ struct MainData {
   float altitude;
 };
 
-// Define struct globally for DHT11 data
-struct DHT11Data {
+// Define struct globally for SHT41 data
+struct SHT41Data {
   float temperature;
   float humidity;
 };
@@ -78,7 +76,7 @@ struct BMP280Data{
   float altitude;
 };
 
-uint8_t displayMode = 0;          // 0 = Main, 1 = DHT11, 2 = BH1750, 3 = BMP280
+uint8_t displayMode = 0;          // 0 = Main, 1 = SHT41, 2 = BH1750, 3 = BMP280
 const uint8_t MAX_MODES = 4;
 
 // Buttons
@@ -99,7 +97,7 @@ bool bmpAvailable = false;
 #define MQTT_STATUS_TOPIC "home/hub/status"
 
 MainData lastMainData = {NAN, NAN, NAN, NAN, NAN};
-DHT11Data lastDHT11Data = {NAN, NAN};
+SHT41Data lastSHT41Data = {NAN, NAN};
 BH1750Data lastBH1750Data = {NAN};
 BMP280Data lastBMP280Data = {NAN, NAN, NAN};
 
@@ -185,15 +183,18 @@ void setup(void) {
   tft.fillScreen(ST77XX_BLACK);
   tft.setRotation(2);
 
-  // DHT11
-  dht.begin();  
-  sensor_t sensor;
-  dht.temperature().getSensor(&sensor);
-  dht.humidity().getSensor(&sensor);      
-  delayDHT = sensor.min_delay / 1000;  // Set minimum DHT11 sampling period (in ms)
-
   // I2C devices
   Wire.begin();
+
+  // SHT41
+  shtAvailable = sht4.begin(&Wire);
+  if (!shtAvailable) {
+    Serial.println(F("Could not find a valid SHT41 sensor! Continuing without it."));
+  }
+  else {
+    sht4.setPrecision(SHT4X_HIGH_PRECISION);
+    sht4.setHeater(SHT4X_NO_HEATER);
+  }
 
   configTime(NTP_UTC_OFFSET_SEC, 0, "pool.ntp.org");
   Serial.println("Waiting for NTP sync...");
@@ -246,7 +247,7 @@ void loop() {
   unsigned long currentMillis = millis();
 
   // ---- read sensors on a fixed interval ----
-  if(currentMillis-previousMillis >= max(sensorReadDelay, delayDHT)){
+  if(currentMillis-previousMillis >= sensorReadDelay){
     previousMillis = currentMillis;
     updateIndividualSensorData();
     publishSensorData(); 
@@ -281,27 +282,27 @@ void loop() {
 }
 
 void updateIndividualSensorData(){
-  lastDHT11Data = readDHT11Data();
+  lastSHT41Data = readSHT41Data();
   lastBH1750Data = readBH1750Data();
   lastBMP280Data = readBMP280Data();
   updateMainData();
 }
 
 void updateMainData(){
-  float dhtTemp = lastDHT11Data.temperature;
+  float shtTemp = lastSHT41Data.temperature;
   float bmpTemp = lastBMP280Data.temperature;
 
-  if (!isnan(dhtTemp) && !isnan(bmpTemp)) {
-    lastMainData.temperature = (dhtTemp + bmpTemp) / 2;
+  if (!isnan(shtTemp) && !isnan(bmpTemp)) {
+    lastMainData.temperature = (shtTemp + bmpTemp) / 2;
   } 
   else if (!isnan(bmpTemp)) {
     lastMainData.temperature = bmpTemp;
   } 
   else {
-    lastMainData.temperature = dhtTemp;   // may still be NAN if both failed
+    lastMainData.temperature = shtTemp;   // may still be NAN if both failed
   }
 
-  lastMainData.humidity = lastDHT11Data.humidity;
+  lastMainData.humidity = lastSHT41Data.humidity;
   lastMainData.light = lastBH1750Data.light;
   lastMainData.pressure = lastBMP280Data.pressure;
   lastMainData.altitude = lastBMP280Data.altitude;
@@ -367,7 +368,7 @@ void tftPrintCurrentPage() {
       tftPrintMainSensorData(); 
       break;
     case 1:  
-      tftPrintDHT11Data();      
+      tftPrintSHT41Data();      
       break;
     case 2:  
       tftPrintBH1750Data();     
@@ -378,26 +379,32 @@ void tftPrintCurrentPage() {
   }
 }
 
-DHT11Data readDHT11Data(){
-  sensors_event_t tempEvent;
+SHT41Data readSHT41Data(){
+  SHT41Data data;
+  data.temperature = NAN;
+  data.humidity = NAN;
+
+  if (!shtAvailable) {
+    // Retry in case the sensor was connected after boot
+    shtAvailable = sht4.begin(&Wire);
+    if (!shtAvailable) {
+      Serial.println("SHT41 not found, skipping temperature and humidity");
+      return data;
+    }
+    sht4.setPrecision(SHT4X_HIGH_PRECISION);
+    sht4.setHeater(SHT4X_NO_HEATER);
+  }
+
   sensors_event_t humidEvent;
-  DHT11Data data;
+  sensors_event_t tempEvent;
+  if (!sht4.getEvent(&humidEvent, &tempEvent) ||
+      isnan(tempEvent.temperature) || isnan(humidEvent.relative_humidity)) {
+    Serial.println("Error reading SHT41 temperature and humidity data");
+    return data;
+  }
 
-  dht.temperature().getEvent(&tempEvent);
-  dht.humidity().getEvent(&humidEvent);
-
-  float temperatureData = tempEvent.temperature;
-  float humidityData = humidEvent.relative_humidity;
-  if (isnan(temperatureData) || isnan(humidityData)) {
-    Serial.println("Error reading DHT11 temperature and humidity data");
-    data.temperature = NAN;
-    data.humidity = NAN;
-    return data; 
-  } 
-
-  data.temperature = temperatureData;
-  data.humidity = humidityData;
-
+  data.temperature = tempEvent.temperature;
+  data.humidity = humidEvent.relative_humidity;
   return data;
 }
 
@@ -496,20 +503,20 @@ void tftPrintMainSensorData() {
   tft.println(" m");
 }
 
-void tftPrintDHT11Data(){
+void tftPrintSHT41Data(){
   tft.setTextWrap(false);
   tft.setCursor(0, 35);
   tft.setTextColor(ST77XX_WHITE);
   tft.setTextSize(2);
 
-  tft.println("DHT11 Sensor");
+  tft.println("SHT41 Sensor");
 
   tft.print("Temp.: ");
-  tft.print(lastDHT11Data.temperature);  
+  tft.print(lastSHT41Data.temperature);  
   tft.println(" *C");
   
   tft.print("Humid.: ");
-  tft.print(lastDHT11Data.humidity);
+  tft.print(lastSHT41Data.humidity);
   tft.println(" %");
 }
 

@@ -27,7 +27,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 
 ## Hardware Requirements
 - **ESP32 Development Board** (e.g., ESP32-WROOM-32)
-- **DHT Sensor** (e.g., DHT11 or DHT22 for temperature and humidity)
+- **SHT41 Sensor** (I2C, for temperature and humidity)
 - **BMP280 Sensor** (for atmospheric pressure and temperature)
 - **BH1750 Sensor** (for light intensity)
 - **ST7789 TFT Display** (240x280 SPI TFT display)
@@ -51,7 +51,7 @@ The ESP32 Home Monitoring Hub is a versatile IoT project that leverages the ESP3
 2. **Install the required libraries**:
    - Open the Arduino IDE Library Manager and install the following libraries:
      - `Adafruit_Sensor`
-     - `DHT sensor library`
+     - `Adafruit SHT4x Library`
      - `Adafruit_BMP280_Library`
      - `BH1750`
      - `Adafruit_ST7735_Library`
@@ -92,7 +92,8 @@ Below is a general wiring guide for connecting the sensors and display to the ES
 
 | Component       | ESP32 Pin | Notes                              |
 |-----------------|-----------|------------------------------------|
-| DHT11/DHT22     | GPIO 2    | Data pin                           |
+| SHT41 (SDA)     | GPIO 21   | I2C SDA (shared I2C bus, address 0x44) |
+| SHT41 (SCL)     | GPIO 22   | I2C SCL (shared I2C bus)           |
 | BMP280 (SDA)    | GPIO 21   | I2C SDA                            |
 | BMP280 (SCL)    | GPIO 22   | I2C SCL                            |
 | BH1750 (SDA)    | GPIO 21   | I2C SDA (shared I2C bus)           |
@@ -108,6 +109,7 @@ Below is a general wiring guide for connecting the sensors and display to the ES
 
 **Notes**:
 - Ensure a common ground (GND) for all components.
+- The SHT41 runs on 3.3V. It replaces the DHT11, so GPIO 2 is no longer used.
 - Power the sensors and display with 3.3V or 5V as per their specifications.
 - Verify pin assignments in the code before wiring.
 - Wire each button between 3.3V and its GPIO, with a 10kΩ resistor from that GPIO to GND. Without it the pin floats when the button is released and presses are missed (GPIO 34 has no internal pull resistors, so the external one is required).
@@ -115,7 +117,7 @@ Below is a general wiring guide for connecting the sensors and display to the ES
 ## Usage
 1. Power the ESP32 via USB or an external power source.
 2. The ST7789 display will show real-time data from the connected sensors:
-   - **Temperature** and **Humidity** from the DHT sensor.
+   - **Temperature** and **Humidity** from the SHT41.
    - **Atmospheric Pressure** (and optional temperature) from the BMP280.
    - **Light Intensity** (in lux) from the BH1750.
 3. Button connected to GPIO 34 will switch On and Off the display.
@@ -125,7 +127,7 @@ Below is a general wiring guide for connecting the sensors and display to the ES
    ```json
    {"timestamp":"2026-10-19T14:30:00-03:00","temperature":23.4,"humidity":55.0,"light":312.5,"pressure":1013.25,"altitude":12.3}
    ```
-   Temperature is the average of the DHT11 and BMP280 (or whichever one is working), pressure is in hPa, and a failed sensor reading is sent as `null`.
+   Temperature is the average of the SHT41 and BMP280 (or whichever one is working), pressure is in hPa, and a failed sensor reading is sent as `null`.
 7. The hub's status is published to `home/hub/status` as a retained message: `online` when it connects, and `offline` from the broker (MQTT last will) about 20–25 s after the hub disappears. To watch it:
    ```bash
    docker compose exec mosquitto mosquitto_sub -t home/hub/status -v
@@ -138,7 +140,7 @@ Below is a general wiring guide for connecting the sensors and display to the ES
 ## Libraries Used
 The project relies on the following open-source libraries:
 - [Adafruit_Sensor](https://github.com/adafruit/Adafruit_Sensor) - Base library for Adafruit sensors
-- [DHT-sensor-library](https://github.com/adafruit/DHT-sensor-library) - For DHT11/DHT22 sensors
+- [Adafruit_SHT4X](https://github.com/adafruit/Adafruit_SHT4X) - For the SHT41 temperature and humidity sensor
 - [Adafruit_BMP280_Library](https://github.com/adafruit/Adafruit_BMP280_Library) - For BMP280 pressure sensor
 - [BH1750](https://github.com/claws/BH1750) - For BH1750 light sensor
 - [Adafruit_ST7735_Library](https://github.com/adafruit/Adafruit-ST7735-Library) - ST77xx driver, used for the ST7789 TFT display
@@ -149,7 +151,8 @@ The project used as a base multiple example projects from the community, example
 - [Display ST7789](https://github.com/adafruit/Adafruit-ST7735-Library/blob/master/examples/graphicstest_st7789/graphicstest_st7789.ino) - Display example
 - [Sensor BH1750](https://randomnerdtutorials.com/esp32-bh1750-ambient-light-sensor/) - For BH1750 sensors
 - [Sensor BMP280](https://circuitdigest.com/microcontroller-projects/interfacing-bmp280-sensor-with-arduino) - For BMP280 sensor
-- [Sensor DHT11](https://blog.eletrogate.com/sensores-dht11-dht22/) - For DHT11 sensor
+- [Sensor DHT11](https://blog.eletrogate.com/sensores-dht11-dht22/) - For DHT11 sensor (used before the SHT41)
+- [Sensor SHT41](https://github.com/adafruit/Adafruit_SHT4X/blob/master/examples/SHT4test/SHT4test.ino) - For SHT41 sensor
 - [Sensor PIR Motion](https://randomnerdtutorials.com/arduino-with-pir-motion-sensor/) - For PIR Motion Sensor
 - [MQTT Client](https://github.com/plapointe6/EspMQTTClient/blob/master/examples/SimpleMQTTClient/SimpleMQTTClient.ino) - For MQTT
 
@@ -157,7 +160,7 @@ The project used as a base multiple example projects from the community, example
 The following features are planned to enhance the ESP32 Home Monitoring Hub:
 - ~~**Sharing Sensor Data to a Separate Server**~~: Done. Readings are published over MQTT using [EspMQTTClient](https://github.com/plapointe6/EspMQTTClient).
 - ~~**Server side**~~: Done in [Home-Monitoring-Hub-Backend](https://github.com/guustavomc/Home-Monitoring-Hub-Backend): Mosquitto, a Spring Boot service that saves readings to PostgreSQL, and a REST API. Grafana and the move to a Raspberry Pi are tracked in its roadmap.
-- **DHT11 reliability**: humidity readings fail intermittently, which suggests a loose wire. Check the wiring, or move the data pin from GPIO 2 (a boot strapping pin) to GPIO 4.
+- ~~**DHT11 reliability**~~: Done. The DHT11 kept failing to read humidity, so it was replaced by an SHT41 on the I2C bus.
 - ~~**Online/offline status**~~: Done. Retained `online` / `offline` (MQTT last will) on `home/hub/status`. Storing it in the backend and showing it in Grafana is tracked in the backend roadmap.
 - ~~**Watchdog / auto-recovery**~~: Done. A hardware watchdog (30 s), a reboot after 5 minutes without MQTT, and the reset reason printed at boot.
 - **Point to the Raspberry Pi**: change `MQTT_BROKER` to the Pi's IP once the backend stack moves there.
